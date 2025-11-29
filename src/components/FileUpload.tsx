@@ -11,11 +11,48 @@ interface FileUploadProps {
   onUploadComplete: (result: any) => void
 }
 
+// Função para converter valor brasileiro para número
+function parseBRLCurrency(value: string): number {
+  // Remove "R$", espaços e caracteres não numéricos exceto vírgula e ponto
+  let cleaned = value
+    .replace(/R\$\s?/gi, '')  // Remove R$ 
+    .replace(/\s/g, '')        // Remove espaços
+    .trim()
+  
+  // Detectar formato brasileiro: 8.818,21 (ponto como milhar, vírgula como decimal)
+  // ou formato americano: 8,818.21 (vírgula como milhar, ponto como decimal)
+  
+  // Se tem vírgula E ponto, verificar qual é o decimal
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    // Se vírgula vem depois do ponto = formato brasileiro (8.818,21)
+    if (cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')) {
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.')
+    } else {
+      // Formato americano (8,818.21)
+      cleaned = cleaned.replace(/,/g, '')
+    }
+  } else if (cleaned.includes(',')) {
+    // Só tem vírgula - pode ser decimal brasileiro (8818,21) ou milhar americano (8,818)
+    // Se tem exatamente 2 dígitos depois da vírgula, é decimal
+    const parts = cleaned.split(',')
+    if (parts[1] && parts[1].length === 2) {
+      cleaned = cleaned.replace(',', '.')
+    } else {
+      // É milhar americano
+      cleaned = cleaned.replace(',', '')
+    }
+  }
+  // Se só tem ponto, deixa como está (formato americano ou decimal simples)
+  
+  return parseFloat(cleaned) || 0
+}
+
 export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [tiktokFile, setTiktokFile] = useState<File | null>(null)
   const [gamFile, setGamFile] = useState<File | null>(null)
   const [date, setDate] = useState('')
   const [faturamentoTiktok, setFaturamentoTiktok] = useState('')
+  const [faturamentoPreview, setFaturamentoPreview] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -34,9 +71,16 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   }
 
   const handleFaturamentoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Permitir apenas números e vírgula/ponto
-    const value = e.target.value.replace(/[^0-9.,]/g, '')
+    const value = e.target.value
     setFaturamentoTiktok(value)
+    
+    // Mostrar preview do valor interpretado
+    if (value.trim()) {
+      const parsed = parseBRLCurrency(value)
+      setFaturamentoPreview(parsed)
+    } else {
+      setFaturamentoPreview(null)
+    }
   }
 
   const handleSubmit = async () => {
@@ -54,8 +98,11 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
     setError('')
 
     try {
-      // Converter faturamento para número (aceita vírgula ou ponto)
-      const faturamentoNumero = parseFloat(faturamentoTiktok.replace(',', '.'))
+      const faturamentoNumero = parseBRLCurrency(faturamentoTiktok)
+
+      if (faturamentoNumero <= 0) {
+        throw new Error('Valor do faturamento inválido')
+      }
 
       const formData = new FormData()
       formData.append('tiktok', tiktokFile)
@@ -78,6 +125,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       setTiktokFile(null)
       setGamFile(null)
       setFaturamentoTiktok('')
+      setFaturamentoPreview(null)
       
       const now = new Date()
       setDate(now.toISOString().slice(0, 16))
@@ -86,6 +134,14 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Formatar número para exibição
+  const formatPreview = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value)
   }
 
   return (
@@ -148,13 +204,18 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
             <Input
               id="faturamento"
               type="text"
-              placeholder="Ex: 8290,71"
+              placeholder="Ex: R$ 8.818,21"
               value={faturamentoTiktok}
               onChange={handleFaturamentoChange}
               className="w-full"
             />
+            {faturamentoPreview !== null && faturamentoPreview > 0 && (
+              <p className="text-sm text-green-600">
+                ✓ Valor interpretado: {formatPreview(faturamentoPreview)}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
-              Valor total do tráfego TikTok no GAM (inclui não rastreado)
+              Cole direto do GAM (aceita R$ 8.818,21 ou 8818.21)
             </p>
           </div>
         </div>

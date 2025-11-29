@@ -1,20 +1,30 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { BarChart3, Upload, History, LogOut } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { BarChart3, Upload, History, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function getUser() {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUserEmail(user?.email || null)
+    }
+    getUser()
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
+    router.refresh()
   }
 
   const links = [
@@ -31,7 +41,7 @@ export function Navbar() {
             <Link href="/" className="font-bold text-xl text-blue-600">
               Arbitragem TikTok
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               {links.map((link) => {
                 const Icon = link.icon
                 const isActive = pathname === link.href
@@ -52,10 +62,18 @@ export function Navbar() {
               })}
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-4">
+            {userEmail && (
+              <span className="hidden md:flex items-center gap-2 text-sm text-gray-600">
+                <User className="h-4 w-4" />
+                {userEmail}
+              </span>
+            )}
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </div>
     </nav>

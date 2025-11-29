@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Upload, FileSpreadsheet, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Upload, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,14 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Preencher data/hora automaticamente ao carregar
+  useEffect(() => {
+    const now = new Date()
+    // Formato: YYYY-MM-DDTHH:MM para input datetime-local
+    const formatted = now.toISOString().slice(0, 16)
+    setDate(formatted)
+  }, [])
+
   const handleTikTokChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) setTiktokFile(e.target.files[0])
   }
@@ -27,8 +35,8 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   }
 
   const handleSubmit = async () => {
-    if (!tiktokFile || !gamFile || !date) {
-      setError('Preencha todos os campos')
+    if (!tiktokFile || !gamFile) {
+      setError('Selecione os dois arquivos')
       return
     }
 
@@ -55,7 +63,10 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       onUploadComplete(result)
       setTiktokFile(null)
       setGamFile(null)
-      setDate('')
+      
+      // Atualizar data para próximo upload
+      const now = new Date()
+      setDate(now.toISOString().slice(0, 16))
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -107,13 +118,13 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="date">Data do Relatório</Label>
+          <Label htmlFor="date">Data/Hora da Importação</Label>
           <Input
             id="date"
-            type="date"
+            type="datetime-local"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full md:w-48"
+            className="w-full md:w-64"
           />
         </div>
 
@@ -123,7 +134,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
 
         <Button
           onClick={handleSubmit}
-          disabled={loading || !tiktokFile || !gamFile || !date}
+          disabled={loading || !tiktokFile || !gamFile}
           className="w-full md:w-auto"
         >
           {loading ? (

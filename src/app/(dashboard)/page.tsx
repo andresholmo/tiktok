@@ -7,7 +7,8 @@ import { CampaignTable } from '@/components/CampaignTable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Import, Campaign } from '@/types'
 import { formatDate } from '@/lib/utils'
-import { CalendarDays, AlertCircle } from 'lucide-react'
+import { CalendarDays, AlertCircle, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,39 +18,44 @@ export default function DashboardPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const supabase = createClient()
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const { data: importData, error: importError } = await supabase
-          .from('imports')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(1)
-          .single()
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      // Buscar última importação por created_at (mais recente)
+      const { data: importData, error: importError } = await supabase
+        .from('imports')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
 
-        if (importError || !importData) {
-          setLoading(false)
-          return
-        }
-
-        setLatestImport(importData)
-
-        const { data: campaignsData, error: campaignsError } = await supabase
-          .from('campaigns')
-          .select('*')
-          .eq('import_id', importData.id)
-          .order('roi', { ascending: true })
-
-        if (!campaignsError && campaignsData) {
-          setCampaigns(campaignsData)
-        }
-      } catch (error) {
-        console.error('Erro ao buscar dados:', error)
-      } finally {
+      if (importError || !importData) {
+        setLatestImport(null)
+        setCampaigns([])
         setLoading(false)
+        return
       }
-    }
 
+      setLatestImport(importData)
+
+      // Buscar campanhas dessa importação
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('import_id', importData.id)
+        .order('roi', { ascending: true })
+
+      if (!campaignsError && campaignsData) {
+        setCampaigns(campaignsData)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchData()
   }, [])
 
@@ -79,9 +85,15 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <CalendarDays className="h-4 w-4" />
-          <span>Dados de {formatDate(latestImport.date)}</span>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={fetchData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <CalendarDays className="h-4 w-4" />
+            <span>Dados de {formatDate(latestImport.created_at)}</span>
+          </div>
         </div>
       </div>
 

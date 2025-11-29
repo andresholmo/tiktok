@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,6 +16,8 @@ import { Import } from '@/types'
 import { formatCurrency, formatPercent, formatDate } from '@/lib/utils'
 import { Trash2, Eye } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default function HistoricoPage() {
   const [imports, setImports] = useState<Import[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +32,7 @@ export default function HistoricoPage() {
       const { data, error } = await supabase
         .from('imports')
         .select('*')
-        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (!error && data) {
         setImports(data)
@@ -86,7 +86,7 @@ export default function HistoricoPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
+                  <TableHead>Data/Hora</TableHead>
                   <TableHead className="text-right">Gasto</TableHead>
                   <TableHead className="text-right">Ganho</TableHead>
                   <TableHead className="text-right">Lucro/Prejuízo</TableHead>
@@ -98,7 +98,7 @@ export default function HistoricoPage() {
                 {imports.map((imp) => (
                   <TableRow key={imp.id}>
                     <TableCell className="font-medium">
-                      {formatDate(imp.date)}
+                      {formatDate(imp.created_at)}
                     </TableCell>
                     <TableCell className="text-right">
                       {formatCurrency(Number(imp.total_gasto))}

@@ -37,18 +37,50 @@ export function parseTikTokFile(buffer: ArrayBuffer): ParsedTikTok[] {
 }
 
 export function parseGAMFile(buffer: ArrayBuffer): ParsedGAM[] {
-  const workbook = XLSX.read(buffer, { type: 'array' })
+  const workbook = XLSX.read(buffer, { type: 'array', codepage: 65001 })
   const sheetName = workbook.SheetNames[0]
   const sheet = workbook.Sheets[sheetName]
-  const data = XLSX.utils.sheet_to_json<GAMRow>(sheet)
+  const data = XLSX.utils.sheet_to_json<Record<string, any>>(sheet)
 
   return data.map(row => {
-    // Suporta tanto "Chaves-valor" quanto "Chaves valor" (CSV pode variar)
-    const chavesValor = row['Chaves-valor'] || (row as any)['Chaves valor'] || ''
+    // Buscar coluna de campanha (pode variar o nome)
+    const chavesValor = row['Chaves-valor'] || row['Chaves valor'] || row['Chaves_valor'] || ''
+    
+    // Buscar coluna de receita
+    const receita = row['Receita do Ad Exchange'] || row['Receita'] || 0
+    
+    // Buscar coluna de eCPM - tentar várias variações
+    let ecpm = 0
+    const ecpmKeys = [
+      'eCPM médio do Ad Exchange',
+      'eCPM medio do Ad Exchange', 
+      'eCPM do Ad Exchange',
+      'eCPM',
+      'ecpm',
+      'ECPM'
+    ]
+    
+    for (const key of ecpmKeys) {
+      if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+        ecpm = Number(row[key]) || 0
+        break
+      }
+    }
+    
+    // Se ainda não encontrou, procurar por chave que contenha 'eCPM' ou 'ecpm'
+    if (ecpm === 0) {
+      for (const key of Object.keys(row)) {
+        if (key.toLowerCase().includes('ecpm')) {
+          ecpm = Number(row[key]) || 0
+          break
+        }
+      }
+    }
+
     return {
-      campanha: chavesValor.replace('utm_campaign=', ''),
-      ganho: Number(row['Receita do Ad Exchange']) || 0,
-      ecpm: Number(row['eCPM médio do Ad Exchange']) || 0,
+      campanha: String(chavesValor).replace('utm_campaign=', ''),
+      ganho: Number(receita) || 0,
+      ecpm: ecpm,
     }
   })
 }

@@ -6,41 +6,39 @@ import { parseTikTokFile, parseGAMFile, mergeData } from '@/lib/parseFiles'
 
 import { calculateTotals } from '@/lib/calculations'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     
-    // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Pegar arquivos do form
     const formData = await request.formData()
     const tiktokFile = formData.get('tiktok') as File
     const gamFile = formData.get('gam') as File
     const date = formData.get('date') as string
+    const faturamentoTiktok = parseFloat(formData.get('faturamento_tiktok') as string) || 0
 
     if (!tiktokFile || !gamFile || !date) {
       return NextResponse.json({ error: 'Arquivos e data são obrigatórios' }, { status: 400 })
     }
 
-    // Converter para ArrayBuffer
     const tiktokBuffer = await tiktokFile.arrayBuffer()
     const gamBuffer = await gamFile.arrayBuffer()
 
-    // Parsear arquivos
     const tiktokData = parseTikTokFile(tiktokBuffer)
     const gamData = parseGAMFile(gamBuffer)
-
-    // Fazer merge
     const campaigns = mergeData(tiktokData, gamData)
-
-    // Calcular totais
     const totals = calculateTotals(campaigns as any)
 
-    // Inserir importação
+    // Calcular ROI Real e Lucro Real
+    const lucroReal = faturamentoTiktok - totals.totalGasto
+    const roiReal = totals.totalGasto > 0 ? ((faturamentoTiktok - totals.totalGasto) / totals.totalGasto) * 100 : 0
+
     const { data: importData, error: importError } = await supabase
       .from('imports')
       .insert({
@@ -50,6 +48,9 @@ export async function POST(request: NextRequest) {
         total_ganho: totals.totalGanho,
         total_lucro: totals.totalLucro,
         roi_geral: totals.roiGeral,
+        faturamento_tiktok: faturamentoTiktok,
+        lucro_real: lucroReal,
+        roi_real: roiReal,
       })
       .select()
       .single()
@@ -59,7 +60,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao salvar importação' }, { status: 500 })
     }
 
-    // Inserir campanhas
     const campaignsToInsert = campaigns.map(c => ({
       ...c,
       import_id: importData.id,
@@ -77,7 +77,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       import_id: importData.id,
-      totals,
+      totals: {
+        ...totals,
+        faturamentoTiktok,
+        lucroReal,
+        roiReal,
+      },
       campaigns_count: campaigns.length,
     })
 

@@ -6,6 +6,9 @@ export interface Import {
   total_ganho: number
   total_lucro: number
   roi_geral: number
+  faturamento_tiktok: number
+  lucro_real: number
+  roi_real: number
 }
 
 export interface Campaign {
@@ -36,4 +39,3 @@ export interface GAMRow {
   'Receita do Ad Exchange': number
   'eCPM médio do Ad Exchange': number
 }
-

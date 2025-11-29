@@ -15,13 +15,12 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [tiktokFile, setTiktokFile] = useState<File | null>(null)
   const [gamFile, setGamFile] = useState<File | null>(null)
   const [date, setDate] = useState('')
+  const [faturamentoTiktok, setFaturamentoTiktok] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Preencher data/hora automaticamente ao carregar
   useEffect(() => {
     const now = new Date()
-    // Formato: YYYY-MM-DDTHH:MM para input datetime-local
     const formatted = now.toISOString().slice(0, 16)
     setDate(formatted)
   }, [])
@@ -34,9 +33,20 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
     if (e.target.files?.[0]) setGamFile(e.target.files[0])
   }
 
+  const handleFaturamentoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Permitir apenas números e vírgula/ponto
+    const value = e.target.value.replace(/[^0-9.,]/g, '')
+    setFaturamentoTiktok(value)
+  }
+
   const handleSubmit = async () => {
     if (!tiktokFile || !gamFile) {
       setError('Selecione os dois arquivos')
+      return
+    }
+
+    if (!faturamentoTiktok) {
+      setError('Informe o Faturamento TikTok')
       return
     }
 
@@ -44,10 +54,14 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
     setError('')
 
     try {
+      // Converter faturamento para número (aceita vírgula ou ponto)
+      const faturamentoNumero = parseFloat(faturamentoTiktok.replace(',', '.'))
+
       const formData = new FormData()
       formData.append('tiktok', tiktokFile)
       formData.append('gam', gamFile)
       formData.append('date', date)
+      formData.append('faturamento_tiktok', faturamentoNumero.toString())
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -63,8 +77,8 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       onUploadComplete(result)
       setTiktokFile(null)
       setGamFile(null)
+      setFaturamentoTiktok('')
       
-      // Atualizar data para próximo upload
       const now = new Date()
       setDate(now.toISOString().slice(0, 16))
     } catch (err: any) {
@@ -117,15 +131,32 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="date">Data/Hora da Importação</Label>
-          <Input
-            id="date"
-            type="datetime-local"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full md:w-64"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="date">Data/Hora da Importação</Label>
+            <Input
+              id="date"
+              type="datetime-local"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="faturamento">Faturamento TikTok (GAM Total)</Label>
+            <Input
+              id="faturamento"
+              type="text"
+              placeholder="Ex: 8290,71"
+              value={faturamentoTiktok}
+              onChange={handleFaturamentoChange}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Valor total do tráfego TikTok no GAM (inclui não rastreado)
+            </p>
+          </div>
         </div>
 
         {error && (
@@ -134,7 +165,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
 
         <Button
           onClick={handleSubmit}
-          disabled={loading || !tiktokFile || !gamFile}
+          disabled={loading || !tiktokFile || !gamFile || !faturamentoTiktok}
           className="w-full md:w-auto"
         >
           {loading ? (

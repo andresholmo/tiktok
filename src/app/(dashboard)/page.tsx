@@ -21,7 +21,6 @@ export default function DashboardPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Buscar última importação por created_at (mais recente)
       const { data: importData, error: importError } = await supabase
         .from('imports')
         .select('*')
@@ -38,7 +37,6 @@ export default function DashboardPage() {
 
       setLatestImport(importData)
 
-      // Buscar campanhas dessa importação
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
         .select('*')
@@ -102,6 +100,9 @@ export default function DashboardPage() {
         totalGanho={Number(latestImport.total_ganho)}
         totalLucro={Number(latestImport.total_lucro)}
         roiGeral={Number(latestImport.roi_geral)}
+        faturamentoTiktok={Number(latestImport.faturamento_tiktok)}
+        lucroReal={Number(latestImport.lucro_real)}
+        roiReal={Number(latestImport.roi_real)}
       />
 
       <Card>

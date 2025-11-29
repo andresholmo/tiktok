@@ -12,6 +12,7 @@
     "save": "git add . && git commit -m 'auto-save' && git push origin main"
   },
   "dependencies": {
+    "@radix-ui/react-label": "^2.1.8",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.86.0",
     "class-variance-authority": "^0.7.1",

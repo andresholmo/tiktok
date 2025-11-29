@@ -42,19 +42,21 @@ export function parseGAMFile(buffer: ArrayBuffer): ParsedGAM[] {
   const sheet = workbook.Sheets[sheetName]
   const data = XLSX.utils.sheet_to_json<GAMRow>(sheet)
 
-  return data.map(row => ({
-    campanha: (row['Chaves-valor'] || '').replace('utm_campaign=', ''),
-    ganho: Number(row['Receita do Ad Exchange']) || 0,
-    ecpm: Number(row['eCPM médio do Ad Exchange']) || 0,
-  }))
+  return data.map(row => {
+    // Suporta tanto "Chaves-valor" quanto "Chaves valor" (CSV pode variar)
+    const chavesValor = row['Chaves-valor'] || (row as any)['Chaves valor'] || ''
+    return {
+      campanha: chavesValor.replace('utm_campaign=', ''),
+      ganho: Number(row['Receita do Ad Exchange']) || 0,
+      ecpm: Number(row['eCPM médio do Ad Exchange']) || 0,
+    }
+  })
 }
 
 export function mergeData(tiktok: ParsedTikTok[], gam: ParsedGAM[]): Omit<Campaign, 'id' | 'import_id' | 'created_at'>[] {
-  // Criar mapa do GAM por campanha
   const gamMap = new Map<string, ParsedGAM>()
   gam.forEach(row => gamMap.set(row.campanha, row))
 
-  // Merge e cálculos
   return tiktok.map(tk => {
     const gamData = gamMap.get(tk.campanha)
     const ganho = gamData?.ganho || 0
@@ -62,7 +64,6 @@ export function mergeData(tiktok: ParsedTikTok[], gam: ParsedGAM[]): Omit<Campai
     const lucro = ganho - tk.gasto
     const roi = tk.gasto > 0 ? ((ganho - tk.gasto) / tk.gasto) * 100 : 0
 
-    // Determinar status
     let status: 'ATIVO' | 'PAUSADO' | 'SEM DADOS'
     if (ganho === 0) {
       status = 'SEM DADOS'

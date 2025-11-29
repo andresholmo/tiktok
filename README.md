@@ -1,48 +1,52 @@
-# Dashboard de Arbitragem TikTok Ads
+# Dashboard de Arbitragem TikTok/GAM
 
-Dashboard para comparar gastos do TikTok Ads com receitas do Google Ad Manager.
+Dashboard para análise de ROI de campanhas de arbitragem de tráfego.
 
 ## Stack
 
-- Next.js 14 (App Router)
-- TypeScript
-- Supabase (auth + database)
-- Tailwind CSS
-- Shadcn/ui para componentes
+- **Frontend:** Next.js 14, TypeScript, Tailwind CSS, Shadcn/ui
+- **Backend:** Supabase (PostgreSQL + Auth)
+- **Deploy:** Vercel
 
-## Getting Started
+## Funcionalidades
 
-First, run the development server:
+- ✅ Upload de relatórios TikTok Ads (XLSX) e GAM (CSV)
+- ✅ Cruzamento automático por nome de campanha
+- ✅ Cálculo de ROI, lucro/prejuízo por campanha
+- ✅ Dashboard com métricas e tabela colorida
+- ✅ Histórico de importações
+- ✅ Autenticação de usuários
 
-```bash
-npm run dev
-```
+## Métricas Calculadas
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Métrica | Fórmula |
+|---------|---------|
+| ROI | ((Ganho - Gasto) / Gasto) × 100 |
+| Lucro/Prejuízo | Ganho - Gasto |
 
-## Configuração
+## Cores da Tabela
 
-1. Crie um arquivo `.env.local` na raiz do projeto:
+| Coluna | Verde | Amarelo | Vermelho |
+|--------|-------|---------|----------|
+| ROI | ≥ 0% | ≥ -30% | < -30% |
+| CPC | ≤ R$0,85 | ≤ R$1,00 | > R$1,00 |
+| CTR | ≥ 5% | ≥ 3% | < 3% |
+| eCPM | ≥ R$700 | ≥ R$500 | < R$500 |
+
+## Setup Local
+
+1. Clone o repositório
+2. Instale dependências: `npm install`
+3. Configure `.env.local` com credenciais do Supabase
+4. Execute: `npm run dev`
+
+## Variáveis de Ambiente
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=sua_url_aqui
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_anon_key_aqui
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_anon_key
 ```
 
-2. Configure o banco de dados no Supabase conforme necessário.
+## Deploy
 
-## Scripts
-
-- `npm run dev` - Inicia o servidor de desenvolvimento
-- `npm run build` - Cria build de produção
-- `npm run start` - Inicia servidor de produção
-- `npm run commit "mensagem"` - Adiciona, commita e envia mensagem
-- `npm run push` - Faz push para o repositório
-- `npm run save` - Auto-save (add, commit e push)
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+O projeto está configurado para deploy automático na Vercel.

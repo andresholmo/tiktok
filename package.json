@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "commit": "git add . && git commit -m",
     "push": "git push origin main",
     "save": "git add . && git commit -m 'auto-save' && git push origin main"

@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { SummaryCards } from '@/components/SummaryCards'
 import { CampaignTable } from '@/components/CampaignTable'
@@ -10,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Import, Campaign } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { CalendarDays, AlertCircle } from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
@@ -20,7 +20,6 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Buscar última importação
         const { data: importData, error: importError } = await supabase
           .from('imports')
           .select('*')
@@ -35,7 +34,6 @@ export default function DashboardPage() {
 
         setLatestImport(importData)
 
-        // Buscar campanhas dessa importação
         const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
           .select('*')

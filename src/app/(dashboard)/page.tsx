@@ -41,7 +41,6 @@ export default function DashboardPage() {
         .from('campaigns')
         .select('*')
         .eq('import_id', importData.id)
-        .order('roi', { ascending: true })
 
       if (!campaignsError && campaignsData) {
         setCampaigns(campaignsData)

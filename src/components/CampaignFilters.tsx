@@ -41,7 +41,7 @@ export function CampaignFilters({
   nichos,
 }: CampaignFiltersProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-white p-4 rounded-lg border">
       {/* Busca */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -49,7 +49,7 @@ export function CampaignFilters({
           placeholder="Buscar campanha..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10"
+          className="pl-10 bg-white"
         />
       </div>
 
@@ -58,10 +58,10 @@ export function CampaignFilters({
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Status</Label>
           <Select value={statusFilter} onValueChange={onStatusChange}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="ATIVO">Ativo</SelectItem>
               <SelectItem value="PAUSADO">Pausado</SelectItem>
@@ -73,10 +73,10 @@ export function CampaignFilters({
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Criador</Label>
           <Select value={criadorFilter} onValueChange={onCriadorChange}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="todos">Todos</SelectItem>
               {criadores.map((criador) => (
                 <SelectItem key={criador} value={criador}>
@@ -90,10 +90,10 @@ export function CampaignFilters({
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Nicho</Label>
           <Select value={nichoFilter} onValueChange={onNichoChange}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="todos">Todos</SelectItem>
               {nichos.map((nicho) => (
                 <SelectItem key={nicho} value={nicho}>
@@ -107,10 +107,10 @@ export function CampaignFilters({
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">ROI</Label>
           <Select value={roiFilter} onValueChange={onRoiChange}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="positivo">Positivo</SelectItem>
               <SelectItem value="negativo">Negativo</SelectItem>

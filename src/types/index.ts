@@ -23,6 +23,7 @@ export interface Campaign {
   cpc: number
   ctr: number
   ecpm: number
+  orcamento_diario: number
 }
 
 export interface TikTokRow {
@@ -31,6 +32,7 @@ export interface TikTokRow {
   'Custo': number
   'CPC (Destino)': number
   'CTR (Destino)': number
+  'Orçamento da campanha': number
 }
 
 export interface GAMRow {

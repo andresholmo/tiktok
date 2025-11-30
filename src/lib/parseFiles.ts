@@ -7,6 +7,7 @@ interface ParsedTikTok {
   gasto: number
   cpc: number
   ctr: number
+  orcamento_diario: number
 }
 
 interface ParsedGAM {
@@ -33,53 +34,54 @@ export function parseTikTokFile(buffer: ArrayBuffer): ParsedTikTok[] {
       gasto: Number(row['Custo']) || 0,
       cpc: Number(row['CPC (Destino)']) || 0,
       ctr: Number(row['CTR (Destino)']) || 0,
+      orcamento_diario: Number(row['Orçamento da campanha']) || 0,
     }))
 }
 
 export function parseGAMFile(buffer: ArrayBuffer): ParsedGAM[] {
-  const workbook = XLSX.read(buffer, { type: 'array', codepage: 65001 })
+  const workbook = XLSX.read(buffer, { 
+    type: 'array',
+    raw: false,
+    codepage: 65001
+  })
+  
   const sheetName = workbook.SheetNames[0]
   const sheet = workbook.Sheets[sheetName]
-  const data = XLSX.utils.sheet_to_json<Record<string, any>>(sheet)
+  const data = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' })
+
+  if (data.length > 0) {
+    console.log('=== COLUNAS DO GAM ===')
+    console.log(Object.keys(data[0]))
+  }
 
   return data.map(row => {
-    // Buscar coluna de campanha (pode variar o nome)
-    const chavesValor = row['Chaves-valor'] || row['Chaves valor'] || row['Chaves_valor'] || ''
-    
-    // Buscar coluna de receita
-    const receita = row['Receita do Ad Exchange'] || row['Receita'] || 0
-    
-    // Buscar coluna de eCPM - tentar várias variações
-    let ecpm = 0
-    const ecpmKeys = [
-      'eCPM médio do Ad Exchange',
-      'eCPM medio do Ad Exchange', 
-      'eCPM do Ad Exchange',
-      'eCPM',
-      'ecpm',
-      'ECPM'
-    ]
-    
-    for (const key of ecpmKeys) {
-      if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-        ecpm = Number(row[key]) || 0
+    let chavesValor = ''
+    for (const key of Object.keys(row)) {
+      if (key.toLowerCase().includes('chaves') || key.toLowerCase().includes('utm')) {
+        chavesValor = String(row[key])
         break
       }
     }
     
-    // Se ainda não encontrou, procurar por chave que contenha 'eCPM' ou 'ecpm'
-    if (ecpm === 0) {
-      for (const key of Object.keys(row)) {
-        if (key.toLowerCase().includes('ecpm')) {
-          ecpm = Number(row[key]) || 0
-          break
-        }
+    let receita = 0
+    for (const key of Object.keys(row)) {
+      if (key.toLowerCase().includes('receita')) {
+        receita = Number(row[key]) || 0
+        break
+      }
+    }
+    
+    let ecpm = 0
+    for (const key of Object.keys(row)) {
+      if (key.toLowerCase().includes('ecpm') || key.toLowerCase().includes('cpm')) {
+        ecpm = Number(row[key]) || 0
+        break
       }
     }
 
     return {
-      campanha: String(chavesValor).replace('utm_campaign=', ''),
-      ganho: Number(receita) || 0,
+      campanha: chavesValor.replace('utm_campaign=', ''),
+      ganho: receita,
       ecpm: ecpm,
     }
   })
@@ -117,6 +119,7 @@ export function mergeData(tiktok: ParsedTikTok[], gam: ParsedGAM[]): Omit<Campai
       cpc: tk.cpc,
       ctr: tk.ctr,
       ecpm,
+      orcamento_diario: tk.orcamento_diario,
     }
   })
 }

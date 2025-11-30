@@ -26,7 +26,7 @@ interface CampaignTableProps {
   campaigns: Campaign[]
 }
 
-type SortField = 'status' | 'campanha' | 'roi' | 'gasto' | 'ganho' | 'lucro_prejuizo' | 'cpc' | 'ctr' | 'ecpm'
+type SortField = 'status' | 'campanha' | 'roi' | 'gasto' | 'ganho' | 'lucro_prejuizo' | 'cpc' | 'ctr' | 'ecpm' | 'orcamento_diario'
 type SortOrder = 'asc' | 'desc'
 
 // Extrair criador do nome da campanha (ex: GUP-01-SDM-AH52-291125-SAKC -> AH)
@@ -200,12 +200,13 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
               <SortableHeader field="cpc">CPC</SortableHeader>
               <SortableHeader field="ctr">CTR</SortableHeader>
               <SortableHeader field="ecpm">eCPM</SortableHeader>
+              <SortableHeader field="orcamento_diario">ORÇAM. DIÁRIO</SortableHeader>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCampaigns.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   Nenhuma campanha encontrada com os filtros selecionados
                 </TableCell>
               </TableRow>
@@ -234,6 +235,9 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                   </TableCell>
                   <TableCell className={`text-center ${getECPMColor(campaign.ecpm)}`}>
                     {formatCurrency(campaign.ecpm)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {formatCurrency(campaign.orcamento_diario)}
                   </TableCell>
                 </TableRow>
               ))

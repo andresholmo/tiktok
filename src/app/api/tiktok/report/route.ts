@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       report_type: 'BASIC',
       data_level: 'AUCTION_CAMPAIGN',
       dimensions: JSON.stringify(['campaign_id']),
-      metrics: JSON.stringify(['campaign_name', 'spend', 'cpc', 'ctr', 'impressions', 'clicks', 'budget']),
+      metrics: JSON.stringify(['campaign_name', 'spend', 'cpc', 'ctr', 'impressions', 'clicks']),
       start_date: startDate,
       end_date: endDate,
       page_size: '1000',
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         ctr: parseFloat(metrics.ctr) || 0,
         impressoes: parseInt(metrics.impressions) || 0,
         cliques: parseInt(metrics.clicks) || 0,
-        orcamento_diario: parseFloat(metrics.budget) || 0,
+        orcamento_diario: 0,
       }
     })
 

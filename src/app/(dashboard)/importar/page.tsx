@@ -93,7 +93,7 @@ export default function ImportarPage() {
                       <td className="p-2">{c.campanha}</td>
                       <td className="text-right p-2">R$ {c.gasto.toFixed(2)}</td>
                       <td className="text-right p-2">R$ {c.cpc.toFixed(2)}</td>
-                      <td className="text-right p-2">{(c.ctr * 100).toFixed(2)}%</td>
+                      <td className="text-right p-2">{c.ctr < 1 ? (c.ctr * 100).toFixed(2) : c.ctr.toFixed(2)}%</td>
                       <td className="text-right p-2">R$ {c.orcamento_diario.toFixed(2)}</td>
                     </tr>
                   ))}

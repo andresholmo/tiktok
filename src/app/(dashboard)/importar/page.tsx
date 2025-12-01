@@ -81,6 +81,7 @@ export default function ImportarPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-2">Campanha</th>
+                    <th className="text-left p-2">Status</th>
                     <th className="text-right p-2">Gasto</th>
                     <th className="text-right p-2">CPC</th>
                     <th className="text-right p-2">CTR</th>
@@ -91,9 +92,16 @@ export default function ImportarPage() {
                   {tiktokData.campaigns.slice(0, 10).map((c: any, i: number) => (
                     <tr key={i} className="border-b">
                       <td className="p-2">{c.campanha}</td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          c.status === 'ATIVO' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {c.status}
+                        </span>
+                      </td>
                       <td className="text-right p-2">R$ {c.gasto.toFixed(2)}</td>
                       <td className="text-right p-2">R$ {c.cpc.toFixed(2)}</td>
-                      <td className="text-right p-2">{c.ctr < 1 ? (c.ctr * 100).toFixed(2) : c.ctr.toFixed(2)}%</td>
+                      <td className="text-right p-2">{c.ctr.toFixed(2)}%</td>
                       <td className="text-right p-2">R$ {c.orcamento_diario.toFixed(2)}</td>
                     </tr>
                   ))}

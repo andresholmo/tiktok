@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { FileUpload } from '@/components/FileUpload'
 import { TikTokConnect } from '@/components/TikTokConnect'
 import { TikTokSync } from '@/components/TikTokSync'
+import { GAMConnect } from '@/components/GAMConnect'
+import { GAMSync } from '@/components/GAMSync'
 import { SummaryCards } from '@/components/SummaryCards'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, AlertCircle } from 'lucide-react'
@@ -116,6 +118,12 @@ export default function ImportarPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Conexão e Sincronização GAM */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <GAMConnect />
+        <GAMSync onSyncComplete={(data) => console.log('GAM Data:', data)} />
+      </div>
 
       {/* Upload Manual */}
       <Card>

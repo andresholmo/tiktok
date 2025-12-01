@@ -13,17 +13,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar credenciais do TikTok
-    const { data: credentials } = await supabase
+    const { data: credentials, error: credError } = await supabase
       .from('tiktok_credentials')
       .select('*')
       .eq('user_id', user.id)
       .single()
 
-    if (!credentials) {
-      return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
+    if (credError || !credentials) {
+      return NextResponse.json({ error: 'TikTok não conectado. Por favor, conecte sua conta primeiro.' }, { status: 400 })
     }
 
     const { startDate, endDate } = await request.json()
+
+    if (!startDate || !endDate) {
+      return NextResponse.json({ error: 'Datas de início e fim são obrigatórias' }, { status: 400 })
+    }
 
     // Buscar relatório de campanhas
     const reportResponse = await fetch('https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/', {
@@ -46,7 +50,8 @@ export async function POST(request: NextRequest) {
           'ctr',
           'impressions',
           'clicks',
-          'budget'
+          'budget',
+          'campaign_budget'
         ],
         page_size: 1000,
       }),
@@ -54,32 +59,68 @@ export async function POST(request: NextRequest) {
 
     const reportData = await reportResponse.json()
 
+    console.log('Resposta do relatório TikTok:', JSON.stringify(reportData, null, 2))
+
     if (reportData.code !== 0) {
       console.error('Erro ao buscar relatório:', reportData)
-      return NextResponse.json({ error: 'Erro ao buscar relatório do TikTok' }, { status: 500 })
+      
+      // Verificar se é erro de token expirado
+      if (reportData.code === 40105 || reportData.message?.includes('token')) {
+        // Remover credenciais inválidas
+        await supabase
+          .from('tiktok_credentials')
+          .delete()
+          .eq('user_id', user.id)
+        
+        return NextResponse.json({ 
+          error: 'Token do TikTok expirado. Por favor, reconecte sua conta.' 
+        }, { status: 401 })
+      }
+      
+      return NextResponse.json({ 
+        error: reportData.message || 'Erro ao buscar relatório do TikTok' 
+      }, { status: 500 })
+    }
+
+    // Verificar se há dados
+    if (!reportData.data?.list || reportData.data.list.length === 0) {
+      return NextResponse.json({
+        success: true,
+        campaigns: [],
+        total: 0,
+        message: 'Nenhuma campanha encontrada no período selecionado'
+      })
     }
 
     // Transformar dados para o formato esperado
-    const campaigns = reportData.data.list.map((item: any) => ({
-      campanha: item.metrics.campaign_name,
-      status: 'ATIVO', // API não retorna status diretamente
-      gasto: parseFloat(item.metrics.spend) || 0,
-      cpc: parseFloat(item.metrics.cpc) || 0,
-      ctr: parseFloat(item.metrics.ctr) || 0,
-      orcamento_diario: parseFloat(item.metrics.budget) || 0,
-      impressoes: parseInt(item.metrics.impressions) || 0,
-      cliques: parseInt(item.metrics.clicks) || 0,
-    }))
+    const campaigns = reportData.data.list.map((item: any) => {
+      const metrics = item.metrics || {}
+      const dimensions = item.dimensions || {}
+      
+      return {
+        campaign_id: dimensions.campaign_id || '',
+        campanha: metrics.campaign_name || 'Sem nome',
+        gasto: parseFloat(metrics.spend) || 0,
+        cpc: parseFloat(metrics.cpc) || 0,
+        ctr: parseFloat(metrics.ctr) || 0,
+        impressoes: parseInt(metrics.impressions) || 0,
+        cliques: parseInt(metrics.clicks) || 0,
+        orcamento_diario: parseFloat(metrics.budget || metrics.campaign_budget) || 0,
+      }
+    })
+
+    // Filtrar campanhas com gasto > 0
+    const campanhasComGasto = campaigns.filter((c: any) => c.gasto > 0)
 
     return NextResponse.json({
       success: true,
-      campaigns,
-      total: campaigns.length,
+      campaigns: campanhasComGasto,
+      total: campanhasComGasto.length,
+      periodo: { startDate, endDate }
     })
 
   } catch (error) {
     console.error('Erro ao buscar relatório:', error)
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
-

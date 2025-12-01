@@ -33,33 +33,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Datas obrigatórias' }, { status: 400 })
     }
 
-    const reportResponse = await fetch('https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/', {
+    // URL correta da API TikTok Marketing
+    const apiUrl = 'https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/'
+    
+    const requestBody = {
+      advertiser_id: credentials.advertiser_id,
+      report_type: 'BASIC',
+      dimensions: ['campaign_id'],
+      data_level: 'AUCTION_CAMPAIGN',
+      start_date: startDate,
+      end_date: endDate,
+      metrics: ['campaign_name', 'spend', 'cpc', 'ctr', 'impressions', 'clicks'],
+      page_size: 1000,
+    }
+
+    console.log('Chamando API TikTok:', apiUrl)
+    console.log('Body:', JSON.stringify(requestBody))
+    console.log('Token (primeiros 20 chars):', credentials.access_token.substring(0, 20))
+
+    const reportResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Access-Token': credentials.access_token,
       },
-      body: JSON.stringify({
-        advertiser_id: credentials.advertiser_id,
-        report_type: 'BASIC',
-        dimensions: ['campaign_id'],
-        data_level: 'AUCTION_CAMPAIGN',
-        start_date: startDate,
-        end_date: endDate,
-        metrics: ['campaign_name', 'spend', 'cpc', 'ctr', 'impressions', 'clicks'],
-        page_size: 1000,
-      }),
+      body: JSON.stringify(requestBody),
     })
 
-    const contentType = reportResponse.headers.get('content-type')
-    
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await reportResponse.text()
-      console.error('Resposta não-JSON:', text.substring(0, 200))
-      return NextResponse.json({ error: 'Erro de comunicação com TikTok' }, { status: 500 })
-    }
+    console.log('Status:', reportResponse.status)
+    console.log('Headers:', JSON.stringify(Object.fromEntries(reportResponse.headers.entries())))
 
-    const reportData = await reportResponse.json()
+    const responseText = await reportResponse.text()
+    console.log('Response:', responseText.substring(0, 500))
+
+    // Tentar parsear como JSON
+    let reportData
+    try {
+      reportData = JSON.parse(responseText)
+    } catch (e) {
+      console.error('Não foi possível parsear resposta como JSON')
+      return NextResponse.json({ error: 'Erro de comunicação com TikTok. Resposta inválida.' }, { status: 500 })
+    }
 
     if (reportData.code !== 0) {
       console.error('Erro TikTok:', reportData)
@@ -67,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!reportData.data?.list || reportData.data.list.length === 0) {
-      return NextResponse.json({ success: true, campaigns: [], total: 0 })
+      return NextResponse.json({ success: true, campaigns: [], total: 0, message: 'Nenhuma campanha encontrada' })
     }
 
     const campaigns = reportData.data.list

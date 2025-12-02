@@ -12,6 +12,7 @@
     "save": "git add . && git commit -m 'auto-save' && git push origin main"
   },
   "dependencies": {
+    "@guardian/google-admanager-api": "^6.0.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
     "@supabase/ssr": "^0.8.0",

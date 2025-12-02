@@ -12,18 +12,12 @@ interface GAMSyncProps {
 }
 
 export function GAMSync({ onSyncComplete }: GAMSyncProps) {
-  const [startDate, setStartDate] = useState(() => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  })
-  const [endDate, setEndDate] = useState(() => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  })
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; message: string; data?: any } | null>(null)
+  const [result, setResult] = useState<any>(null)
 
-  const handleSync = async () => {
+  const handleSync = async (reportType: 'campanhas' | 'faturamento') => {
     setLoading(true)
     setResult(null)
 
@@ -31,7 +25,7 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
       const response = await fetch('/api/gam/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate }),
+        body: JSON.stringify({ startDate, endDate, reportType }),
       })
 
       const data = await response.json()
@@ -39,21 +33,15 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
       if (data.success) {
         setResult({
           success: true,
-          message: data.message || 'Dados obtidos com sucesso!',
-          data: data
+          type: reportType,
+          data
         })
         if (onSyncComplete) onSyncComplete(data)
       } else {
-        setResult({
-          success: false,
-          message: data.error || 'Erro ao buscar dados'
-        })
+        setResult({ success: false, message: data.error })
       }
     } catch (error: any) {
-      setResult({
-        success: false,
-        message: error.message || 'Erro ao sincronizar'
-      })
+      setResult({ success: false, message: error.message })
     } finally {
       setLoading(false)
     }
@@ -71,57 +59,58 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Data Início</Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Data Fim</Label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
         </div>
 
-        <Button onClick={handleSync} disabled={loading} className="w-full">
-          {loading ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Sincronizando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Buscar Dados do GAM
-            </>
-          )}
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button onClick={() => handleSync('campanhas')} disabled={loading} variant="outline">
+            {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Campanhas
+          </Button>
+          <Button onClick={() => handleSync('faturamento')} disabled={loading} variant="outline">
+            {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Faturamento
+          </Button>
+        </div>
 
         {result && (
-          <div className={`flex items-start gap-2 p-3 rounded-lg ${
-            result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-          }`}>
+          <div className={`p-3 rounded-lg ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
             {result.success ? (
-              <CheckCircle className="h-5 w-5 mt-0.5" />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  <span>{result.data.total} registros encontrados</span>
+                </div>
+                {result.data.faturamentoTotal && (
+                  <div className="text-lg font-bold">
+                    Faturamento TikTok: R$ {result.data.faturamentoTotal.toFixed(2)}
+                  </div>
+                )}
+                {result.data.campaigns?.slice(0, 5).map((c: any, i: number) => (
+                  <div key={i} className="text-sm">
+                    {c.campanha || c.source}: R$ {c.receita.toFixed(2)}
+                  </div>
+                ))}
+                {result.data.total > 5 && (
+                  <div className="text-sm text-muted-foreground">
+                    ... e mais {result.data.total - 5}
+                  </div>
+                )}
+              </div>
             ) : (
-              <AlertCircle className="h-5 w-5 mt-0.5" />
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                <span>{result.message}</span>
+              </div>
             )}
-            <div>
-              <span className="text-sm">{result.message}</span>
-              {result.data && (
-                <pre className="text-xs mt-2 overflow-auto max-h-40">
-                  {JSON.stringify(result.data, null, 2)}
-                </pre>
-              )}
-            </div>
           </div>
         )}
       </CardContent>
     </Card>
   )
 }
-

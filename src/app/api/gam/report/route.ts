@@ -215,6 +215,12 @@ export async function POST(request: NextRequest) {
     const campaigns: CampaignData[] = []
 
     if (results.rows) {
+      // LOG: Ver estrutura da primeira linha para debug
+      if (results.rows.length > 0) {
+        console.log('=== DEBUG: Primeira linha completa ===')
+        console.log(JSON.stringify(results.rows[0], null, 2))
+      }
+
       for (const row of results.rows) {
         const dimensions = row.dimensionValues || []
         const metrics = row.metricValueGroups?.[0]?.primaryValues || []
@@ -223,14 +229,73 @@ export async function POST(request: NextRequest) {
         const campaignMatch = keyValue.match(/utm_campaign=([^,\s]+)/)
 
         if (campaignMatch && campaignMatch[1].includes('GUP-01')) {
+          // LOG: Debug dos valores de métricas para campanhas GUP-01
+          console.log('=== DEBUG: Métricas da campanha', campaignMatch[1], '===')
+          console.log('Metrics array:', JSON.stringify(metrics, null, 2))
+          
+          // Impressões (índice 0)
+          const impressoes = parseInt(metrics[0]?.intValue || '0')
+          
+          // Cliques (índice 1)
+          const cliques = parseInt(metrics[1]?.intValue || '0')
+          
+          // CTR (índice 2) - pode vir como doubleValue ou percentage
+          let ctr = 0
+          if (metrics[2]) {
+            console.log('CTR raw:', metrics[2])
+            if (metrics[2].doubleValue !== undefined) {
+              ctr = parseFloat(metrics[2].doubleValue) * 100
+            } else if (metrics[2].intValue !== undefined) {
+              ctr = parseFloat(metrics[2].intValue)
+            }
+          }
+          
+          // Receita (índice 3) - pode vir em vários formatos
+          let receita = 0
+          if (metrics[3]) {
+            console.log('Receita raw:', metrics[3])
+            // Tentar todos os formatos possíveis
+            if (metrics[3].decimalValue?.value !== undefined) {
+              receita = parseFloat(metrics[3].decimalValue.value) / 1000000
+            } else if (metrics[3].microsValue !== undefined) {
+              receita = parseFloat(metrics[3].microsValue) / 1000000
+            } else if (metrics[3].intValue !== undefined) {
+              receita = parseFloat(metrics[3].intValue) / 1000000
+            } else if (metrics[3].doubleValue !== undefined) {
+              receita = parseFloat(metrics[3].doubleValue)
+            } else if (metrics[3].stringValue !== undefined) {
+              // Pode vir como string formatada
+              receita = parseFloat(metrics[3].stringValue.replace(/[^0-9.-]/g, '')) || 0
+            }
+          }
+          
+          // eCPM (índice 4) - mesmo tratamento
+          let ecpm = 0
+          if (metrics[4]) {
+            console.log('eCPM raw:', metrics[4])
+            if (metrics[4].decimalValue?.value !== undefined) {
+              ecpm = parseFloat(metrics[4].decimalValue.value) / 1000000
+            } else if (metrics[4].microsValue !== undefined) {
+              ecpm = parseFloat(metrics[4].microsValue) / 1000000
+            } else if (metrics[4].intValue !== undefined) {
+              ecpm = parseFloat(metrics[4].intValue) / 1000000
+            } else if (metrics[4].doubleValue !== undefined) {
+              ecpm = parseFloat(metrics[4].doubleValue)
+            } else if (metrics[4].stringValue !== undefined) {
+              ecpm = parseFloat(metrics[4].stringValue.replace(/[^0-9.-]/g, '')) || 0
+            }
+          }
+
+          console.log(`Valores finais: impressoes=${impressoes}, cliques=${cliques}, ctr=${ctr}, receita=${receita}, ecpm=${ecpm}`)
+
           campaigns.push({
             data: dimensions[0]?.stringValue || '',
             campanha: campaignMatch[1],
-            impressoes: parseInt(metrics[0]?.intValue || '0'),
-            cliques: parseInt(metrics[1]?.intValue || '0'),
-            ctr: parseFloat(metrics[2]?.doubleValue || '0') * 100,
-            receita: parseFloat(metrics[3]?.decimalValue?.value || '0') / 1000000,
-            ecpm: parseFloat(metrics[4]?.decimalValue?.value || '0') / 1000000,
+            impressoes,
+            cliques,
+            ctr,
+            receita,
+            ecpm,
           })
         }
       }

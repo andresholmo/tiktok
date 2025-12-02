@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     console.log('Criando relatório...')
     
     const reportDefinition = {
-      displayName: `API Campanhas TikTok ${startDate}`,
+      displayName: `API Campanhas ${startDate}`,
       visibility: 'HIDDEN',
       reportDefinition: {
         dimensions: ['DATE', 'KEY_VALUES_NAME'],
@@ -73,16 +73,7 @@ export async function POST(request: NextRequest) {
           }
         },
         reportType: 'HISTORICAL',
-        currencyCode: 'BRL',
-        filters: [
-          {
-            fieldFilter: {
-              field: 'KEY_VALUES_NAME',
-              operation: 'CONTAINS',
-              values: [{ stringValue: 'utm_campaign' }]
-            }
-          }
-        ]
+        currencyCode: 'BRL'
       }
     }
 

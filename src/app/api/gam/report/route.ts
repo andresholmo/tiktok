@@ -65,16 +65,13 @@ export async function POST(request: NextRequest) {
 
     console.log('Relatório encontrado:', savedQuery.name)
 
-    // Modificar datas do relatório
-    const [startYear, startMonth, startDay] = startDate.split('-').map(Number)
-    const [endYear, endMonth, endDay] = endDate.split('-').map(Number)
+    // Usar a query do relatório salvo sem modificar datas
+    // A API SOAP tem formato específico para datas que varia por versão
+    const reportQuery = savedQuery.reportQuery
 
-    const reportQuery = { 
-      ...savedQuery.reportQuery,
-      dateRangeType: 'CUSTOM_DATE' as any,
-      startDate: { year: startYear, month: startMonth, day: startDay },
-      endDate: { year: endYear, month: endMonth, day: endDay }
-    }
+    // Tentar modificar apenas o dateRangeType se necessário
+    // Se o relatório salvo já tem um período, usá-lo primeiro para testar
+    console.log('Query original:', JSON.stringify(reportQuery, null, 2))
 
     console.log('Executando relatório...')
 

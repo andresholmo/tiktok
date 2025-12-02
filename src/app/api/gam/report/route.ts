@@ -154,66 +154,149 @@ export async function POST(request: NextRequest) {
 
     // 4. Buscar resultados
     console.log('Buscando resultados...')
-    const resultName = operationStatus.response?.result
+    console.log('Operation response:', JSON.stringify(operationStatus, null, 2))
     
-    if (!resultName) {
-      return NextResponse.json({ 
-        error: 'Resultado não encontrado',
-        operation: operationStatus 
-      }, { status: 500 })
-    }
+    // O resultado pode estar em diferentes lugares dependendo da estrutura
+    const resultName = operationStatus.response?.result || 
+                       operationStatus.response?.name ||
+                       operationStatus.metadata?.result
+    
+    // Se não tiver result, tentar buscar diretamente do relatório
+    let resultsData: any = null
+    
+    if (resultName) {
+      console.log('Buscando de:', resultName)
+      const resultsResponse = await fetch(
+        `https://admanager.googleapis.com/v1/${resultName}:fetchRows`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pageSize: 1000 }),
+        }
+      )
 
-    const resultsResponse = await fetch(
-      `https://admanager.googleapis.com/v1/${resultName}:fetchRows`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pageSize: 1000 }),
+      if (resultsResponse.ok) {
+        resultsData = await resultsResponse.json()
+      } else {
+        console.log('Erro ao buscar rows:', await resultsResponse.text())
       }
-    )
+    }
+    
+    // Alternativa: buscar os resultados diretamente pelo report ID
+    if (!resultsData || !resultsData.rows) {
+      console.log('Tentando busca alternativa...')
+      
+      // Listar os results do relatório
+      const listResultsResponse = await fetch(
+        `${baseUrl}/reports/${report.reportId}/results`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` },
+        }
+      )
+      
+      if (listResultsResponse.ok) {
+        const listResults = await listResultsResponse.json()
+        console.log('Results list:', JSON.stringify(listResults, null, 2))
+        
+        if (listResults.results && listResults.results.length > 0) {
+          const latestResult = listResults.results[0]
+          
+          const fetchRowsResponse = await fetch(
+            `https://admanager.googleapis.com/v1/${latestResult.name}:fetchRows`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ pageSize: 1000 }),
+            }
+          )
+          
+          if (fetchRowsResponse.ok) {
+            resultsData = await fetchRowsResponse.json()
+          } else {
+            console.log('Erro fetchRows:', await fetchRowsResponse.text())
+          }
+        }
+      } else {
+        console.log('Erro ao listar results:', await listResultsResponse.text())
+      }
+    }
 
-    if (!resultsResponse.ok) {
-      const errorText = await resultsResponse.text()
-      console.error('Erro ao buscar resultados:', errorText)
+    if (!resultsData) {
       return NextResponse.json({ 
-        error: 'Erro ao buscar resultados',
-        details: errorText 
+        error: 'Não foi possível obter resultados do relatório',
+        operation: operationStatus,
+        reportId: report.reportId
       }, { status: 500 })
     }
 
-    const results = await resultsResponse.json()
-    console.log('Resultados:', results.totalRowCount || 0, 'linhas')
+    console.log('Resultados obtidos:', resultsData.totalRowCount || resultsData.rows?.length || 0, 'linhas')
 
     // 5. Processar dados
     const campaigns: any[] = []
     
-    if (results.rows) {
-      for (const row of results.rows) {
+    if (resultsData.rows) {
+      for (const row of resultsData.rows) {
         const dimensions = row.dimensionValues || []
         const metrics = row.metricValueGroups?.[0]?.primaryValues || []
 
-        // Extrair nome da campanha
+        // Extrair nome da campanha do KEY_VALUES_NAME
+        // Formato esperado: "utm_campaign=GUP-01-SDM-xxx"
         const keyValue = dimensions[1]?.stringValue || ''
-        const campaignMatch = keyValue.match(/utm_campaign=([^,]+)/)
+        const campaignMatch = keyValue.match(/utm_campaign=([^,\s]+)/)
         
         if (campaignMatch && campaignMatch[1].includes('GUP-01')) {
+          // Extrair valores das métricas
+          const impressoes = parseInt(metrics[0]?.intValue || '0')
+          const cliques = parseInt(metrics[1]?.intValue || '0')
+          
+          // CTR pode vir como double ou percentage
+          let ctr = 0
+          if (metrics[2]?.doubleValue) {
+            ctr = parseFloat(metrics[2].doubleValue) * 100
+          } else if (metrics[2]?.intValue) {
+            ctr = parseFloat(metrics[2].intValue)
+          }
+          
+          // Receita - pode estar em micros (dividir por 1000000)
+          let receita = 0
+          if (metrics[3]?.decimalValue?.value) {
+            receita = parseFloat(metrics[3].decimalValue.value) / 1000000
+          } else if (metrics[3]?.intValue) {
+            receita = parseFloat(metrics[3].intValue) / 1000000
+          } else if (metrics[3]?.doubleValue) {
+            receita = parseFloat(metrics[3].doubleValue)
+          }
+          
+          // eCPM
+          let ecpm = 0
+          if (metrics[4]?.decimalValue?.value) {
+            ecpm = parseFloat(metrics[4].decimalValue.value) / 1000000
+          } else if (metrics[4]?.intValue) {
+            ecpm = parseFloat(metrics[4].intValue) / 1000000
+          } else if (metrics[4]?.doubleValue) {
+            ecpm = parseFloat(metrics[4].doubleValue)
+          }
+
           campaigns.push({
-            data: dimensions[0]?.stringValue || '',
+            data: dimensions[0]?.stringValue || startDate,
             campanha: campaignMatch[1],
-            impressoes: parseInt(metrics[0]?.intValue || '0'),
-            cliques: parseInt(metrics[1]?.intValue || '0'),
-            ctr: parseFloat(metrics[2]?.doubleValue || '0') * 100,
-            receita: parseFloat(metrics[3]?.decimalValue?.value || metrics[3]?.intValue || '0') / 1000000,
-            ecpm: parseFloat(metrics[4]?.decimalValue?.value || metrics[4]?.intValue || '0') / 1000000,
+            impressoes,
+            cliques,
+            ctr,
+            receita,
+            ecpm,
           })
         }
       }
     }
 
-    // 6. Limpar relatório criado (opcional)
+    // 6. Limpar relatório criado
     try {
       await fetch(`${baseUrl}/reports/${report.reportId}`, {
         method: 'DELETE',

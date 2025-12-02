@@ -1,263 +1,256 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GAM_REPORTS } from '@/lib/gam-config'
+import { google } from 'googleapis'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+export const maxDuration = 300 // 5 minutos
 
-async function getGAMClient() {
-  const { AdManagerClient, GoogleSACredential, StatementBuilder } = await import('@guardian/google-admanager-api')
-  return { AdManagerClient, GoogleSACredential, StatementBuilder }
+async function getAuthToken() {
+  const clientEmail = process.env.GAM_CLIENT_EMAIL
+  const privateKey = process.env.GAM_PRIVATE_KEY?.replace(/\\n/g, '\n')
+
+  if (!clientEmail || !privateKey) {
+    throw new Error('Credenciais GAM não configuradas')
+  }
+
+  const auth = new google.auth.JWT({
+    email: clientEmail,
+    key: privateKey,
+    scopes: ['https://www.googleapis.com/auth/admanager'],
+  })
+
+  const token = await auth.getAccessToken()
+  return token.token
 }
 
 export async function POST(request: NextRequest) {
   try {
     const networkCode = process.env.GAM_NETWORK_CODE
-    const clientEmail = process.env.GAM_CLIENT_EMAIL
-    const privateKey = process.env.GAM_PRIVATE_KEY?.replace(/\\n/g, '\n')
 
-    if (!networkCode || !clientEmail || !privateKey) {
-      return NextResponse.json({ error: 'Configuração do GAM não encontrada' }, { status: 500 })
+    if (!networkCode) {
+      return NextResponse.json({ error: 'Network code não configurado' }, { status: 500 })
     }
 
     const body = await request.json()
-    const { startDate, endDate, reportType = 'campanhas' } = body
+    const { startDate, endDate } = body
 
     if (!startDate || !endDate) {
       return NextResponse.json({ error: 'Datas obrigatórias' }, { status: 400 })
     }
 
-    console.log('=== BUSCANDO RELATÓRIO GAM ===')
-    console.log('Tipo:', reportType)
+    console.log('=== GAM REST API - BUSCANDO RELATÓRIO ===')
     console.log('Período:', startDate, 'a', endDate)
 
-    const { AdManagerClient, GoogleSACredential, StatementBuilder } = await getGAMClient()
+    const token = await getAuthToken()
+    if (!token) {
+      return NextResponse.json({ error: 'Erro de autenticação' }, { status: 500 })
+    }
 
-    const credential = new GoogleSACredential({
-      private_key: privateKey,
-      client_email: clientEmail,
+    const baseUrl = `https://admanager.googleapis.com/v1/networks/${networkCode}`
+
+    // Parsear datas
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number)
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number)
+
+    // 1. Criar relatório
+    console.log('Criando relatório...')
+    
+    const reportDefinition = {
+      displayName: `API Campanhas TikTok ${startDate}`,
+      visibility: 'HIDDEN',
+      reportDefinition: {
+        dimensions: ['DATE', 'KEY_VALUES_NAME'],
+        metrics: [
+          'AD_EXCHANGE_IMPRESSIONS',
+          'AD_EXCHANGE_CLICKS',
+          'AD_EXCHANGE_CTR',
+          'AD_EXCHANGE_REVENUE',
+          'AD_EXCHANGE_AVERAGE_ECPM'
+        ],
+        dateRange: {
+          fixed: {
+            startDate: { year: startYear, month: startMonth, day: startDay },
+            endDate: { year: endYear, month: endMonth, day: endDay }
+          }
+        },
+        reportType: 'HISTORICAL',
+        currencyCode: 'BRL',
+        filters: [
+          {
+            fieldFilter: {
+              field: 'KEY_VALUES_NAME',
+              operation: 'CONTAINS',
+              values: [{ stringValue: 'utm_campaign' }]
+            }
+          }
+        ]
+      }
+    }
+
+    const createResponse = await fetch(`${baseUrl}/reports`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reportDefinition),
     })
 
-    const adManager = new AdManagerClient(
-      parseInt(networkCode),
-      credential,
-      'Arbitragem Dashboard'
-    )
-
-    const reportService = await adManager.getService('ReportService')
-
-    // Escolher qual relatório buscar
-    const savedQueryId = GAM_REPORTS.FATURAMENTO_SITE
-
-    console.log('Buscando relatório salvo ID:', savedQueryId)
-
-    // Buscar o relatório salvo específico
-    const statementBuilder = new StatementBuilder()
-    statementBuilder.where(`id = ${savedQueryId}`)
-    const savedQueries = await reportService.getSavedQueriesByStatement(statementBuilder.toStatement())
-
-    const savedQuery = savedQueries?.results?.[0]
-
-    if (!savedQuery) {
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text()
+      console.error('Erro ao criar relatório:', errorText)
       return NextResponse.json({ 
-        error: `Relatório salvo não encontrado (ID: ${savedQueryId})` 
-      }, { status: 404 })
-    }
-
-    console.log('Relatório encontrado:', savedQuery.name)
-
-    // Usar a query do relatório salvo sem modificar datas
-    // A API SOAP tem formato específico para datas que varia por versão
-    const reportQuery = savedQuery.reportQuery
-
-    // Tentar modificar apenas o dateRangeType se necessário
-    // Se o relatório salvo já tem um período, usá-lo primeiro para testar
-    console.log('Query original:', JSON.stringify(reportQuery, null, 2))
-
-    console.log('Executando relatório...')
-
-    const reportJob = await reportService.runReportJob({ 
-      reportQuery 
-    } as any)
-    
-    console.log('Report Job ID:', reportJob?.id)
-
-    if (!reportJob?.id) {
-      return NextResponse.json({ error: 'Falha ao criar job de relatório' }, { status: 500 })
-    }
-
-    // Aguardar conclusão
-    let status = (reportJob as any).reportJobStatus
-    let attempts = 0
-
-    while (status !== 'COMPLETED' && status !== 'FAILED' && attempts < 60) {
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      const statusResult = await reportService.getReportJobStatus({ reportJobId: (reportJob as any).id } as any)
-      status = (statusResult as any)?.reportJobStatus || status
-      attempts++
-      console.log(`Status: ${status} (${attempts}/60)`)
-    }
-
-    if (status !== 'COMPLETED') {
-      return NextResponse.json({ 
-        error: status === 'FAILED' ? 'Relatório falhou' : 'Timeout' 
+        error: 'Erro ao criar relatório',
+        details: errorText 
       }, { status: 500 })
     }
 
-    // Baixar relatório
-    const downloadUrl = await reportService.getReportDownloadURL(
-      (reportJob as any).id,
-      'CSV_DUMP' as any
-    )
+    const report = await createResponse.json()
+    console.log('Relatório criado:', report.name)
 
-    console.log('Baixando de:', downloadUrl)
+    // 2. Executar relatório
+    console.log('Executando relatório...')
+    
+    const runResponse = await fetch(`${baseUrl}/reports/${report.reportId}:run`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
 
-    const reportResponse = await fetch(downloadUrl)
-    const reportText = await reportResponse.text()
-
-    console.log('CSV (500 chars):', reportText.substring(0, 500))
-
-    // Parsear CSV
-    const lines = reportText.trim().split('\n')
-    if (lines.length < 2) {
-      return NextResponse.json({ success: true, campaigns: [], total: 0 })
+    if (!runResponse.ok) {
+      const errorText = await runResponse.text()
+      console.error('Erro ao executar:', errorText)
+      return NextResponse.json({ 
+        error: 'Erro ao executar relatório',
+        details: errorText 
+      }, { status: 500 })
     }
 
-    const headers = lines[0].split(',').map(h => h.trim())
-    const campaigns: any[] = []
+    const operation = await runResponse.json()
+    console.log('Operação:', operation.name)
 
-    for (let i = 1; i < lines.length; i++) {
-      // Tratar valores com vírgula dentro de aspas
-      const values = parseCSVLine(lines[i])
-      const row: any = {}
+    // 3. Aguardar conclusão (polling)
+    let operationStatus = operation
+    let attempts = 0
+    const maxAttempts = 60 // 5 minutos
+
+    while (!operationStatus.done && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 5000))
       
-      headers.forEach((header, index) => {
-        row[header] = values[index]?.trim() || ''
-      })
-
-      // Extrair dados baseado no tipo de relatório
-      if (reportType === 'faturamento') {
-        // Relatório de source - pegar apenas tiktok
-        const source = findValue(row, ['utm_source', 'source', 'Dimension'])
-        if (source?.toLowerCase() === 'tiktok') {
-          campaigns.push({
-            source: 'tiktok',
-            receita: parseRevenue(row),
-            ecpm: parseEcpm(row),
-            ctr: parseCtr(row),
-          })
+      const statusResponse = await fetch(
+        `https://admanager.googleapis.com/v1/${operationStatus.name}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` },
         }
-      } else {
-        // Relatório de campanhas
-        const campanha = extractCampaignName(row)
-        if (campanha) {
+      )
+      
+      operationStatus = await statusResponse.json()
+      attempts++
+      console.log(`Status: ${operationStatus.done ? 'DONE' : 'RUNNING'} (${attempts}/${maxAttempts})`)
+    }
+
+    if (!operationStatus.done) {
+      return NextResponse.json({ error: 'Timeout aguardando relatório' }, { status: 500 })
+    }
+
+    if (operationStatus.error) {
+      return NextResponse.json({ 
+        error: 'Relatório falhou',
+        details: operationStatus.error 
+      }, { status: 500 })
+    }
+
+    // 4. Buscar resultados
+    console.log('Buscando resultados...')
+    const resultName = operationStatus.response?.result
+    
+    if (!resultName) {
+      return NextResponse.json({ 
+        error: 'Resultado não encontrado',
+        operation: operationStatus 
+      }, { status: 500 })
+    }
+
+    const resultsResponse = await fetch(
+      `https://admanager.googleapis.com/v1/${resultName}:fetchRows`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pageSize: 1000 }),
+      }
+    )
+
+    if (!resultsResponse.ok) {
+      const errorText = await resultsResponse.text()
+      console.error('Erro ao buscar resultados:', errorText)
+      return NextResponse.json({ 
+        error: 'Erro ao buscar resultados',
+        details: errorText 
+      }, { status: 500 })
+    }
+
+    const results = await resultsResponse.json()
+    console.log('Resultados:', results.totalRowCount || 0, 'linhas')
+
+    // 5. Processar dados
+    const campaigns: any[] = []
+    
+    if (results.rows) {
+      for (const row of results.rows) {
+        const dimensions = row.dimensionValues || []
+        const metrics = row.metricValueGroups?.[0]?.primaryValues || []
+
+        // Extrair nome da campanha
+        const keyValue = dimensions[1]?.stringValue || ''
+        const campaignMatch = keyValue.match(/utm_campaign=([^,]+)/)
+        
+        if (campaignMatch && campaignMatch[1].includes('GUP-01')) {
           campaigns.push({
-            campanha,
-            receita: parseRevenue(row),
-            ecpm: parseEcpm(row),
-            ctr: parseCtr(row),
+            data: dimensions[0]?.stringValue || '',
+            campanha: campaignMatch[1],
+            impressoes: parseInt(metrics[0]?.intValue || '0'),
+            cliques: parseInt(metrics[1]?.intValue || '0'),
+            ctr: parseFloat(metrics[2]?.doubleValue || '0') * 100,
+            receita: parseFloat(metrics[3]?.decimalValue?.value || metrics[3]?.intValue || '0') / 1000000,
+            ecpm: parseFloat(metrics[4]?.decimalValue?.value || metrics[4]?.intValue || '0') / 1000000,
           })
         }
       }
     }
 
-    // Para faturamento, calcular total
-    const faturamentoTotal = reportType === 'faturamento'
-      ? campaigns.reduce((sum, c) => sum + c.receita, 0)
-      : undefined
+    // 6. Limpar relatório criado (opcional)
+    try {
+      await fetch(`${baseUrl}/reports/${report.reportId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      console.log('Relatório temporário deletado')
+    } catch (e) {
+      console.log('Não foi possível deletar relatório temporário')
+    }
 
-    console.log(`Processadas ${campaigns.length} linhas`)
+    // Calcular totais
+    const totalReceita = campaigns.reduce((sum, c) => sum + c.receita, 0)
+
+    console.log(`Processadas ${campaigns.length} campanhas, receita total: R$ ${totalReceita.toFixed(2)}`)
 
     return NextResponse.json({
       success: true,
       campaigns,
       total: campaigns.length,
-      faturamentoTotal,
-      periodo: { startDate, endDate },
-      reportName: savedQuery.name
+      totalReceita,
+      periodo: { startDate, endDate }
     })
 
   } catch (error: any) {
     console.error('Erro:', error)
     return NextResponse.json({ 
       error: error.message || 'Erro interno',
-      details: error.toString()
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 })
   }
-}
-
-// Funções auxiliares
-function parseCSVLine(line: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-  
-  for (const char of line) {
-    if (char === '"') {
-      inQuotes = !inQuotes
-    } else if (char === ',' && !inQuotes) {
-      result.push(current)
-      current = ''
-    } else {
-      current += char
-    }
-  }
-  result.push(current)
-  return result
-}
-
-function findValue(row: any, possibleKeys: string[]): string {
-  for (const key of Object.keys(row)) {
-    for (const possible of possibleKeys) {
-      if (key.toLowerCase().includes(possible.toLowerCase())) {
-        return row[key]
-      }
-    }
-  }
-  return ''
-}
-
-function extractCampaignName(row: any): string {
-  for (const [key, value] of Object.entries(row)) {
-    const strValue = String(value)
-    // Procurar utm_campaign=NOME
-    const match = strValue.match(/utm_campaign[=:]([^,\s]+)/)
-    if (match) return match[1]
-    
-    // Procurar padrão GUP-01-SDM-
-    if (strValue.includes('GUP-01-SDM-')) {
-      const gupMatch = strValue.match(/(GUP-01-SDM-[A-Z0-9-]+)/i)
-      if (gupMatch) return gupMatch[1]
-    }
-  }
-  return ''
-}
-
-function parseRevenue(row: any): number {
-  for (const [key, value] of Object.entries(row)) {
-    if (key.toLowerCase().includes('revenue') || key.toLowerCase().includes('receita')) {
-      const num = parseFloat(String(value).replace(/[^\d.-]/g, '')) || 0
-      // Se valor muito grande, provavelmente está em micros
-      return num > 100000 ? num / 1000000 : num
-    }
-  }
-  return 0
-}
-
-function parseEcpm(row: any): number {
-  for (const [key, value] of Object.entries(row)) {
-    if (key.toLowerCase().includes('ecpm')) {
-      const num = parseFloat(String(value).replace(/[^\d.-]/g, '')) || 0
-      return num > 100000 ? num / 1000000 : num
-    }
-  }
-  return 0
-}
-
-function parseCtr(row: any): number {
-  for (const [key, value] of Object.entries(row)) {
-    if (key.toLowerCase().includes('ctr')) {
-      return parseFloat(String(value).replace(/[^\d.-]/g, '')) || 0
-    }
-  }
-  return 0
 }

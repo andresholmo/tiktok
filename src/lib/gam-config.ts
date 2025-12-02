@@ -1,9 +1,9 @@
 // IDs dos relatórios salvos no GAM
 export const GAM_REPORTS = {
-  // Relatório de receita por campanha (utm_campaign)
-  CAMPANHAS_TIKTOK: '6492526400',
+  // Relatório "Faturamento do Site" - único disponível via API
+  FATURAMENTO_SITE: '14995079929',
   
-  // Relatório de receita por source (utm_source) - para faturamento total
-  SOURCE_TIKTOK: '6491930267',
+  // IDs antigos (relatórios interativos - não funcionam via API)
+  // CAMPANHAS_TIKTOK: '6492526400',
+  // SOURCE_TIKTOK: '6491930267',
 }
-

@@ -46,9 +46,7 @@ export async function POST(request: NextRequest) {
     const reportService = await adManager.getService('ReportService')
 
     // Escolher qual relatório buscar
-    const savedQueryId = reportType === 'faturamento' 
-      ? GAM_REPORTS.SOURCE_TIKTOK 
-      : GAM_REPORTS.CAMPANHAS_TIKTOK
+    const savedQueryId = GAM_REPORTS.FATURAMENTO_SITE
 
     console.log('Buscando relatório salvo ID:', savedQueryId)
 

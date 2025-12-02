@@ -156,85 +156,41 @@ export async function POST(request: NextRequest) {
     console.log('Buscando resultados...')
     console.log('Operation response:', JSON.stringify(operationStatus, null, 2))
     
-    // O resultado pode estar em diferentes lugares dependendo da estrutura
-    const resultName = operationStatus.response?.result || 
-                       operationStatus.response?.name ||
-                       operationStatus.metadata?.result
+    // O resultado está em response.reportResult
+    const resultName = operationStatus.response?.reportResult
     
-    // Se não tiver result, tentar buscar diretamente do relatório
-    let resultsData: any = null
+    console.log('Result name:', resultName)
     
-    if (resultName) {
-      console.log('Buscando de:', resultName)
-      const resultsResponse = await fetch(
-        `https://admanager.googleapis.com/v1/${resultName}:fetchRows`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ pageSize: 1000 }),
-        }
-      )
-
-      if (resultsResponse.ok) {
-        resultsData = await resultsResponse.json()
-      } else {
-        console.log('Erro ao buscar rows:', await resultsResponse.text())
-      }
-    }
-    
-    // Alternativa: buscar os resultados diretamente pelo report ID
-    if (!resultsData || !resultsData.rows) {
-      console.log('Tentando busca alternativa...')
-      
-      // Listar os results do relatório
-      const listResultsResponse = await fetch(
-        `${baseUrl}/reports/${report.reportId}/results`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` },
-        }
-      )
-      
-      if (listResultsResponse.ok) {
-        const listResults = await listResultsResponse.json()
-        console.log('Results list:', JSON.stringify(listResults, null, 2))
-        
-        if (listResults.results && listResults.results.length > 0) {
-          const latestResult = listResults.results[0]
-          
-          const fetchRowsResponse = await fetch(
-            `https://admanager.googleapis.com/v1/${latestResult.name}:fetchRows`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ pageSize: 1000 }),
-            }
-          )
-          
-          if (fetchRowsResponse.ok) {
-            resultsData = await fetchRowsResponse.json()
-          } else {
-            console.log('Erro fetchRows:', await fetchRowsResponse.text())
-          }
-        }
-      } else {
-        console.log('Erro ao listar results:', await listResultsResponse.text())
-      }
-    }
-
-    if (!resultsData) {
+    if (!resultName) {
       return NextResponse.json({ 
-        error: 'Não foi possível obter resultados do relatório',
-        operation: operationStatus,
-        reportId: report.reportId
+        error: 'Resultado não encontrado na resposta',
+        operation: operationStatus 
       }, { status: 500 })
     }
 
+    // Buscar as linhas do resultado
+    const resultsResponse = await fetch(
+      `https://admanager.googleapis.com/v1/${resultName}:fetchRows`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pageSize: 1000 }),
+      }
+    )
+
+    if (!resultsResponse.ok) {
+      const errorText = await resultsResponse.text()
+      console.error('Erro ao buscar rows:', errorText)
+      return NextResponse.json({ 
+        error: 'Erro ao buscar resultados',
+        details: errorText 
+      }, { status: 500 })
+    }
+
+    const resultsData = await resultsResponse.json()
     console.log('Resultados obtidos:', resultsData.totalRowCount || resultsData.rows?.length || 0, 'linhas')
 
     // 5. Processar dados

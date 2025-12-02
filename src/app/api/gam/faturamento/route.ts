@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Datas obrigatórias' }, { status: 400 })
     }
 
-    console.log('=== GAM REST API - BUSCANDO RELATÓRIO ===')
+    console.log('=== GAM: Buscando Faturamento TikTok Total ===')
     console.log(`Período: ${startDate} a ${endDate}`)
 
     const token = await getAccessToken()
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     const [startYear, startMonth, startDay] = startDate.split('-').map(Number)
     const [endYear, endMonth, endDay] = endDate.split('-').map(Number)
 
-    // 1. Criar relatório
-    console.log('Criando relatório...')
+    // Criar relatório de Source para buscar faturamento por utm_source
+    console.log('Criando relatório de faturamento...')
     
     const createResponse = await fetch(`${baseUrl}/reports`, {
       method: 'POST',
@@ -73,16 +73,13 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        displayName: `API Campanhas ${new Date().toISOString().split('T')[0]}`,
+        displayName: `API Faturamento Source ${new Date().toISOString().split('T')[0]}`,
         visibility: 'HIDDEN',
         reportDefinition: {
           dimensions: ['DATE', 'KEY_VALUES_NAME'],
           metrics: [
             'AD_EXCHANGE_IMPRESSIONS',
-            'AD_EXCHANGE_CLICKS',
-            'AD_EXCHANGE_CTR',
             'AD_EXCHANGE_REVENUE',
-            'AD_EXCHANGE_AVERAGE_ECPM'
           ],
           dateRange: {
             fixed: {
@@ -105,9 +102,7 @@ export async function POST(request: NextRequest) {
     const report = await createResponse.json()
     console.log('Relatório criado:', report.name)
 
-    // 2. Executar relatório
-    console.log('Executando relatório...')
-    
+    // Executar relatório
     const runResponse = await fetch(`https://admanager.googleapis.com/v1/${report.name}:run`, {
       method: 'POST',
       headers: {
@@ -118,19 +113,17 @@ export async function POST(request: NextRequest) {
 
     if (!runResponse.ok) {
       const error = await runResponse.text()
-      console.error('Erro ao executar relatório:', error)
       return NextResponse.json({ error: 'Erro ao executar relatório', details: error }, { status: 500 })
     }
 
     const operation = await runResponse.json()
     console.log('Operação:', operation.name)
 
-    // 3. Polling até completar
+    // Polling até completar
     let operationStatus = operation
     let attempts = 0
-    const maxAttempts = 60
 
-    while (!operationStatus.done && attempts < maxAttempts) {
+    while (!operationStatus.done && attempts < 60) {
       await new Promise(resolve => setTimeout(resolve, 5000))
       attempts++
 
@@ -139,139 +132,65 @@ export async function POST(request: NextRequest) {
       })
 
       operationStatus = await statusResponse.json()
-      console.log(`Status: ${operationStatus.done ? 'DONE' : 'RUNNING'} (${attempts}/${maxAttempts})`)
+      console.log(`Status: ${operationStatus.done ? 'DONE' : 'RUNNING'} (${attempts}/60)`)
     }
 
     if (!operationStatus.done) {
       return NextResponse.json({ error: 'Timeout ao aguardar relatório' }, { status: 504 })
     }
 
-    // 4. AGUARDAR 3 SEGUNDOS após done=true para garantir que o resultado está disponível
-    console.log('Aguardando disponibilidade do resultado...')
+    // Aguardar disponibilidade
     await new Promise(resolve => setTimeout(resolve, 3000))
 
-    // 5. Buscar resultados
-    console.log('Buscando resultados...')
-    
+    // Buscar resultados
     const resultName = operationStatus.response?.reportResult
-    console.log('Result name:', resultName)
 
     if (!resultName) {
-      return NextResponse.json({ 
-        error: 'Resultado não encontrado na resposta',
-        operation: operationStatus 
-      }, { status: 500 })
+      return NextResponse.json({ error: 'Resultado não encontrado' }, { status: 500 })
     }
 
-    // fetchRows é GET sem body
     const fetchUrl = `https://admanager.googleapis.com/v1/${resultName}:fetchRows`
-    console.log('Fetch URL:', fetchUrl)
     
     let resultsResponse = await fetch(fetchUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Authorization': `Bearer ${token}` },
     })
 
-    // Se ainda der 404, tentar mais uma vez com delay maior
     if (resultsResponse.status === 404) {
-      console.log('404 na primeira tentativa, aguardando mais 5 segundos...')
       await new Promise(resolve => setTimeout(resolve, 5000))
-      
       resultsResponse = await fetch(fetchUrl, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       })
     }
 
     if (!resultsResponse.ok) {
       const errorText = await resultsResponse.text()
-      console.error('Erro ao buscar rows:', errorText)
-      return NextResponse.json({ 
-        error: 'Erro ao buscar resultados',
-        details: errorText,
-        url: fetchUrl,
-        status: resultsResponse.status
-      }, { status: 500 })
+      return NextResponse.json({ error: 'Erro ao buscar resultados', details: errorText }, { status: 500 })
     }
 
     const results = await resultsResponse.json()
-    console.log('Resultados obtidos:', results.rows?.length || 0, 'linhas')
 
-    // 6. Processar dados
-    interface CampaignData {
-      data: string
-      campanha: string
-      impressoes: number
-      cliques: number
-      ctr: number
-      receita: number
-      ecpm: number
-    }
-
-    const campaigns: CampaignData[] = []
+    // Calcular faturamento TikTok (utm_source=tiktok)
+    let faturamentoTikTok = 0
+    let impressoesTikTok = 0
 
     if (results.rows) {
       for (const row of results.rows) {
         const dimensions = row.dimensionValues || []
         const metrics = row.metricValueGroups?.[0]?.primaryValues || []
 
-        // A data vem como intValue no formato YYYYMMDD
-        const dateInt = dimensions[0]?.intValue || dimensions[0]?.stringValue || ''
-        const dateStr = String(dateInt)
-        const formattedDate = dateStr.length === 8 
-          ? `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)}`
-          : dateStr
-
-        // KEY_VALUES_NAME vem como stringValue
         const keyValue = dimensions[1]?.stringValue || ''
-        const campaignMatch = keyValue.match(/utm_campaign=([^,\s]+)/)
-
-        if (campaignMatch && campaignMatch[1].includes('GUP-01')) {
-          const impressoes = parseInt(metrics[0]?.intValue || '0')
-          const cliques = parseInt(metrics[1]?.intValue || '0')
-          const ctr = (metrics[2]?.doubleValue || 0) * 100
-          const receita = metrics[3]?.doubleValue || 0
-          const ecpm = metrics[4]?.doubleValue || 0
-
-          campaigns.push({
-            data: formattedDate,
-            campanha: campaignMatch[1],
-            impressoes,
-            cliques,
-            ctr,
-            receita,
-            ecpm,
-          })
+        
+        // Verificar se é utm_source=tiktok
+        if (keyValue.toLowerCase().includes('utm_source=tiktok')) {
+          impressoesTikTok += parseInt(metrics[0]?.intValue || '0')
+          faturamentoTikTok += metrics[1]?.doubleValue || 0
         }
       }
     }
 
-    // Agrupar por campanha
-    const aggregated = campaigns.reduce((acc, curr) => {
-      const key = curr.campanha
-      if (!acc[key]) {
-        acc[key] = { ...curr }
-      } else {
-        acc[key].impressoes += curr.impressoes
-        acc[key].cliques += curr.cliques
-        acc[key].receita += curr.receita
-        acc[key].ctr = acc[key].impressoes > 0 
-          ? (acc[key].cliques / acc[key].impressoes) * 100 
-          : 0
-        acc[key].ecpm = acc[key].impressoes > 0 
-          ? (acc[key].receita / acc[key].impressoes) * 1000 
-          : 0
-      }
-      return acc
-    }, {} as Record<string, CampaignData>)
-
-    const finalCampaigns = Object.values(aggregated)
-
-    // 7. Limpar relatório
+    // Limpar relatório
     try {
       await fetch(`https://admanager.googleapis.com/v1/${report.name}`, {
         method: 'DELETE',
@@ -281,27 +200,21 @@ export async function POST(request: NextRequest) {
       // Ignorar
     }
 
-    const totalReceita = finalCampaigns.reduce((sum, c) => sum + c.receita, 0)
-    const totalImpressoes = finalCampaigns.reduce((sum, c) => sum + c.impressoes, 0)
-    const totalCliques = finalCampaigns.reduce((sum, c) => sum + c.cliques, 0)
-
-    console.log(`GAM Campanhas: ${finalCampaigns.length} campanhas, R$ ${totalReceita.toFixed(2)}`)
+    console.log(`Faturamento TikTok (GAM Total): R$ ${faturamentoTikTok.toFixed(2)}`)
 
     return NextResponse.json({
       success: true,
-      campaigns: finalCampaigns,
-      total: finalCampaigns.length,
-      totalReceita,
-      totalImpressoes,
-      totalCliques,
+      faturamentoTikTok,
+      impressoesTikTok,
       periodo: { startDate, endDate },
     })
 
   } catch (error) {
-    console.error('Erro geral:', error)
+    console.error('Erro:', error)
     return NextResponse.json({ 
       error: 'Erro interno', 
       details: error instanceof Error ? error.message : String(error) 
     }, { status: 500 })
   }
 }
+

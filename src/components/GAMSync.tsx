@@ -31,28 +31,46 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
   const handleSync = async () => {
     setLoading(true)
     setResult(null)
-    setProgress('Conectando ao GAM...')
+    setProgress('Buscando campanhas...')
 
     try {
-      const response = await fetch('/api/gam/report', {
+      // 1. Buscar campanhas
+      const campanhasResponse = await fetch('/api/gam/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startDate, endDate }),
       })
 
-      setProgress('Processando relatório...')
+      const campanhasData = await campanhasResponse.json()
 
-      const data = await response.json()
-
-      if (data.success) {
-        setResult({
-          success: true,
-          data
-        })
-        if (onSyncComplete) onSyncComplete(data)
-      } else {
-        setResult({ success: false, message: data.error || 'Erro desconhecido', details: data.details })
+      if (!campanhasData.success) {
+        throw new Error(campanhasData.error || 'Erro ao buscar campanhas')
       }
+
+      setProgress('Buscando faturamento total...')
+
+      // 2. Buscar faturamento total TikTok
+      const faturamentoResponse = await fetch('/api/gam/faturamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate, endDate }),
+      })
+
+      const faturamentoData = await faturamentoResponse.json()
+
+      // Combinar resultados
+      const combinedData = {
+        ...campanhasData,
+        faturamentoTikTok: faturamentoData.success ? faturamentoData.faturamentoTikTok : 0,
+      }
+
+      setResult({
+        success: true,
+        data: combinedData
+      })
+
+      if (onSyncComplete) onSyncComplete(combinedData)
+
     } catch (error: any) {
       setResult({ success: false, message: error.message })
     } finally {
@@ -62,7 +80,10 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+    return new Intl.NumberFormat('pt-BR', { 
+      style: 'currency', 
+      currency: 'BRL' 
+    }).format(value)
   }
 
   return (
@@ -103,6 +124,15 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
           <div className={`p-3 rounded-lg ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
             {result.success ? (
               <div className="space-y-3">
+                {/* Faturamento TikTok Total */}
+                <div className="bg-green-100 p-2 rounded flex justify-between items-center">
+                  <span className="font-medium">Faturamento TikTok (GAM Total)</span>
+                  <span className="text-lg font-bold">
+                    {formatCurrency(result.data.faturamentoTikTok || 0)}
+                  </span>
+                </div>
+
+                {/* Resumo das campanhas */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5" />
@@ -113,10 +143,11 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
                   </div>
                 </div>
                 
+                {/* Tabela de campanhas */}
                 {result.data.campaigns?.length > 0 && (
                   <div className="max-h-60 overflow-y-auto">
                     <table className="w-full text-xs">
-                      <thead className="bg-green-100">
+                      <thead className="bg-green-100 sticky top-0">
                         <tr>
                           <th className="text-left p-1">Campanha</th>
                           <th className="text-right p-1">Receita</th>
@@ -125,7 +156,7 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {result.data.campaigns.slice(0, 10).map((c: Campaign, i: number) => (
+                        {result.data.campaigns.map((c: Campaign, i: number) => (
                           <tr key={i} className="border-b border-green-100">
                             <td className="p-1 truncate max-w-[120px]" title={c.campanha}>
                               {c.campanha}
@@ -137,25 +168,13 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
                         ))}
                       </tbody>
                     </table>
-                    {result.data.total > 10 && (
-                      <div className="text-center text-xs mt-2 text-green-600">
-                        ... e mais {result.data.total - 10} campanhas
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5" />
-                  <span>{result.message}</span>
-                </div>
-                {result.details && (
-                  <pre className="text-xs bg-red-100 p-2 rounded overflow-auto max-h-32">
-                    {typeof result.details === 'string' ? result.details : JSON.stringify(result.details, null, 2)}
-                  </pre>
-                )}
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                <span>{result.message}</span>
               </div>
             )}
           </div>

@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
       // Ignorar
     }
 
-    console.log(`Faturamento TikTok (GAM Total): R$ ${faturamentoTikTok.toFixed(2)}`)
+    console.log(`Faturamento TikTok (GAM Total): R$ ${(faturamentoTikTok ?? 0).toFixed(2)}`)
 
     return NextResponse.json({
       success: true,

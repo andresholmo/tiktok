@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
     const totalImpressoes = finalCampaigns.reduce((sum, c) => sum + c.impressoes, 0)
     const totalCliques = finalCampaigns.reduce((sum, c) => sum + c.cliques, 0)
 
-    console.log(`GAM Campanhas: ${finalCampaigns.length} campanhas, R$ ${totalReceita.toFixed(2)}`)
+    console.log(`GAM Campanhas: ${finalCampaigns.length} campanhas, R$ ${(totalReceita ?? 0).toFixed(2)}`)
 
     return NextResponse.json({
       success: true,

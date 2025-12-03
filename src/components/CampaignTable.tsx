@@ -220,7 +220,7 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                   </TableCell>
                   <TableCell className="font-medium">{campaign.campanha}</TableCell>
                   <TableCell className={`text-center ${getROIColor(campaign.roi ?? 0)}`}>
-                    {formatPercent(campaign.roi)}
+                    {formatPercentSafe(campaign.roi)}
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(campaign.gasto)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(campaign.ganho)}</TableCell>

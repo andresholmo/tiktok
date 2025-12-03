@@ -14,3 +14,4 @@ ALTER TABLE tiktok_credentials ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Usuário vê suas credenciais" ON tiktok_credentials
   FOR ALL USING (auth.uid() = user_id);
 
+

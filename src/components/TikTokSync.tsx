@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RefreshCw, Download, CheckCircle, AlertCircle } from 'lucide-react'
+import { getTodayBR } from '@/lib/date-utils'
 
 interface TikTokSyncProps {
   isConnected: boolean
@@ -13,14 +14,8 @@ interface TikTokSyncProps {
 }
 
 export function TikTokSync({ isConnected, onSyncComplete }: TikTokSyncProps) {
-  const [startDate, setStartDate] = useState(() => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  })
-  const [endDate, setEndDate] = useState(() => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  })
+  const [startDate, setStartDate] = useState(() => getTodayBR())
+  const [endDate, setEndDate] = useState(() => getTodayBR())
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
 
@@ -132,4 +127,5 @@ export function TikTokSync({ isConnected, onSyncComplete }: TikTokSyncProps) {
     </Card>
   )
 }
+
 

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getDateTimeLocalBR } from '@/lib/date-utils'
 
 interface FileUploadProps {
   onUploadComplete: (result: any) => void
@@ -57,9 +58,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const now = new Date()
-    const formatted = now.toISOString().slice(0, 16)
-    setDate(formatted)
+    setDate(getDateTimeLocalBR())
   }, [])
 
   const handleTikTokChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,8 +126,7 @@ export function FileUpload({ onUploadComplete }: FileUploadProps) {
       setFaturamentoTiktok('')
       setFaturamentoPreview(null)
       
-      const now = new Date()
-      setDate(now.toISOString().slice(0, 16))
+      setDate(getDateTimeLocalBR())
     } catch (err: any) {
       setError(err.message)
     } finally {

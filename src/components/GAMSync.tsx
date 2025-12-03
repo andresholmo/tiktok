@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RefreshCw, Download, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { getTodayBR } from '@/lib/date-utils'
 
 interface Campaign {
   data: string
@@ -22,8 +23,8 @@ interface GAMSyncProps {
 }
 
 export function GAMSync({ onSyncComplete }: GAMSyncProps) {
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0])
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState(() => getTodayBR())
+  const [endDate, setEndDate] = useState(() => getTodayBR())
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
   const [result, setResult] = useState<any>(null)

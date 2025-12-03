@@ -185,9 +185,9 @@ export function CampaignTable({ campaigns, showFilters = true }: CampaignTablePr
         nichos={nichos}
       />
 
-      <div className="text-sm text-muted-foreground">
-        Exibindo {filteredCampaigns.length} de {campaigns.filter(c => c.status !== 'SEM DADOS').length} campanhas
-      </div>
+          <div className="text-sm text-muted-foreground">
+            Exibindo {displayCampaigns.length} de {campaigns.filter(c => c.status !== 'SEM DADOS').length} campanhas
+          </div>
 
       <div className="rounded-md border overflow-x-auto">
         <Table>

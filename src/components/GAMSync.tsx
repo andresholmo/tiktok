@@ -124,7 +124,7 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
                 <div className="bg-green-100 p-2 rounded flex justify-between items-center">
                   <span className="font-medium">Faturamento TikTok (GAM Total)</span>
                   <span className="text-lg font-bold">
-                    {formatCurrency(result.data.faturamentoTikTok || 0)}
+                    {formatCurrencyBRL(result.data?.faturamentoTikTok)}
                   </span>
                 </div>
 

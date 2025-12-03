@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
     }
 
-    // TikTok usa centavos/menor unidade, então multiplicar por 100 se necessário
-    // Verificar documentação do TikTok para sua moeda
-    const budgetInCents = Math.round(budget * 100)
+    // TikTok para BRL usa valor em reais (não centavos)
+    // Arredondar para evitar decimais
+    const budgetValue = Math.round(budget)
 
     const results = []
     const errors = []
@@ -59,8 +59,7 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
               advertiser_id: credentials.advertiser_id,
               campaign_id: campaignId,
-              budget: budgetInCents,
-              // NÃO incluir budget_mode - não pode ser alterado em campanhas existentes
+              budget: budgetValue,
             }),
           }
         )
@@ -78,7 +77,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Orçamento atualizado para R$ ${budget}:`, results)
+    console.log(`Orçamento atualizado para R$ ${budgetValue}:`, results)
     if (errors.length > 0) {
       console.error('Erros:', errors)
     }
@@ -94,10 +93,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${results.length} campanha(s) atualizada(s)`,
+      message: `${results.length} campanha(s) atualizada(s) para R$ ${budgetValue}`,
       updated: results,
       errors: errors.length > 0 ? errors : undefined,
-      budget,
+      budget: budgetValue,
     })
 
   } catch (error) {

@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
         cpc: tiktokCampaign.cpc || 0,
         ctr: tiktokCampaign.ctr || 0,
         ecpm: gamCampaign?.ecpm || 0,
+        orcamento_diario: tiktokCampaign.orcamento_diario || 0,
       })
 
       // Remover do mapa para identificar campanhas GAM sem correspondência
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
         cpc: 0,
         ctr: 0,
         ecpm: gamCampaign.ecpm || 0,
+        orcamento_diario: 0, // Sem dados do TikTok
       })
     }
 

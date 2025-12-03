@@ -97,8 +97,15 @@ export async function POST(request: NextRequest) {
     
     if (campaignData.data?.list) {
       for (const camp of campaignData.data.list) {
+        // Budget pode ser diário ou total, dependendo do budget_mode
+        // BUDGET_MODE_DAY = orçamento diário
+        // BUDGET_MODE_TOTAL = orçamento total
+        const budgetMode = camp.budget_mode || camp.budget_type || 'BUDGET_MODE_DAY'
+        const budget = parseFloat(camp.budget || camp.daily_budget || '0') || 0
+        
         campaignMap.set(camp.campaign_id, {
-          budget: parseFloat(camp.budget) || 0,
+          budget: budget,
+          budget_mode: budgetMode,
           status: camp.operation_status || camp.status || 'UNKNOWN',
           campaign_name: camp.campaign_name,
         })
@@ -128,6 +135,16 @@ export async function POST(request: NextRequest) {
 
       const ctrValue = parseFloat(metrics.ctr) || 0
 
+      // Determinar orçamento diário
+      // Se budget_mode for BUDGET_MODE_TOTAL, dividir por dias do período
+      let orcamentoDiario = campaignInfo.budget || 0
+      if (campaignInfo.budget_mode === 'BUDGET_MODE_TOTAL' && campaignInfo.budget > 0) {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        const dias = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+        orcamentoDiario = campaignInfo.budget / dias
+      }
+
       return {
         campaign_id: campaignId,
         campanha: metrics.campaign_name || campaignInfo.campaign_name || 'Sem nome',
@@ -136,7 +153,8 @@ export async function POST(request: NextRequest) {
         ctr: ctrValue < 1 ? ctrValue * 100 : ctrValue, // Converter para percentual se necessário
         impressoes: parseInt(metrics.impressions) || 0,
         cliques: parseInt(metrics.clicks) || 0,
-        orcamento_diario: campaignInfo.budget || 0,
+        orcamento_diario: orcamentoDiario,
+        budget_mode: campaignInfo.budget_mode || 'BUDGET_MODE_DAY',
         status: status,
       }
     })

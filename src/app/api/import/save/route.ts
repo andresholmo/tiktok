@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
         ctr: 0,
         ecpm: gamCampaign.ecpm || 0,
         orcamento_diario: 0, // Sem dados do TikTok
+        is_smart_plus: false, // Campanhas GAM sem TikTok não são Smart Plus
       })
     }
 

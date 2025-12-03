@@ -51,7 +51,7 @@ function extractNicho(campanha: string): string {
   return ''
 }
 
-export function CampaignTable({ campaigns, showFilters = true }: CampaignTableProps) {
+export function CampaignTable({ campaigns, showFilters = false }: CampaignTableProps) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
   const [criadorFilter, setCriadorFilter] = useState('todos')
@@ -60,54 +60,72 @@ export function CampaignTable({ campaigns, showFilters = true }: CampaignTablePr
   const [sortField, setSortField] = useState<SortField>('roi')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
 
-  // Extrair criadores e nichos únicos
+  // Extrair criadores e nichos únicos (apenas se showFilters = true)
   const criadores = useMemo(() => {
+    if (!showFilters) return []
     const set = new Set<string>()
     campaigns.forEach(c => {
-      const criador = extractCriador(c.campanha)
+      const criador = extractCriador(c.campanha || '')
       if (criador) set.add(criador)
     })
     return Array.from(set).sort()
-  }, [campaigns])
+  }, [campaigns, showFilters])
 
   const nichos = useMemo(() => {
+    if (!showFilters) return []
     const set = new Set<string>()
     campaigns.forEach(c => {
-      const nicho = extractNicho(c.campanha)
+      const nicho = extractNicho(c.campanha || '')
       if (nicho) set.add(nicho)
     })
     return Array.from(set).sort()
-  }, [campaigns])
+  }, [campaigns, showFilters])
 
-  // Filtrar e ordenar campanhas
+  // Filtrar e ordenar campanhas (apenas se showFilters = true)
   const filteredCampaigns = useMemo(() => {
-    // Sempre ocultar campanhas SEM DADOS
+    if (!showFilters) {
+      // Se não há filtros internos, apenas ordenar as campanhas recebidas
+      const sorted = [...campaigns]
+      sorted.sort((a, b) => {
+        let aValue: any = a[sortField]
+        let bValue: any = b[sortField]
+
+        if (typeof aValue === 'string') {
+          aValue = aValue.toLowerCase()
+          bValue = bValue.toLowerCase()
+        }
+
+        if (sortOrder === 'asc') {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+        } else {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+        }
+      })
+      return sorted
+    }
+
+    // Lógica de filtro interno (quando showFilters = true)
     let filtered = campaigns.filter(c => c.status !== 'SEM DADOS')
 
-    // Busca por nome
     if (search) {
       const searchLower = search.toLowerCase()
       filtered = filtered.filter(c => 
-        c.campanha.toLowerCase().includes(searchLower)
+        (c.campanha || '').toLowerCase().includes(searchLower)
       )
     }
 
-    // Filtro de status
     if (statusFilter !== 'todos') {
       filtered = filtered.filter(c => c.status === statusFilter)
     }
 
-    // Filtro de criador
     if (criadorFilter !== 'todos') {
-      filtered = filtered.filter(c => extractCriador(c.campanha) === criadorFilter)
+      filtered = filtered.filter(c => extractCriador(c.campanha || '') === criadorFilter)
     }
 
-    // Filtro de nicho
     if (nichoFilter !== 'todos') {
-      filtered = filtered.filter(c => extractNicho(c.campanha) === nichoFilter)
+      filtered = filtered.filter(c => extractNicho(c.campanha || '') === nichoFilter)
     }
 
-    // Filtro de ROI
     if (roiFilter === 'positivo') {
       filtered = filtered.filter(c => (c.roi ?? 0) >= 0)
     } else if (roiFilter === 'negativo') {
@@ -119,7 +137,6 @@ export function CampaignTable({ campaigns, showFilters = true }: CampaignTablePr
       let aValue: any = a[sortField]
       let bValue: any = b[sortField]
 
-      // Tratamento para strings
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase()
         bValue = bValue.toLowerCase()
@@ -133,7 +150,7 @@ export function CampaignTable({ campaigns, showFilters = true }: CampaignTablePr
     })
 
     return filtered
-  }, [campaigns, search, statusFilter, criadorFilter, nichoFilter, roiFilter, sortField, sortOrder])
+  }, [campaigns, showFilters, search, statusFilter, criadorFilter, nichoFilter, roiFilter, sortField, sortOrder])
 
   // Função para alternar ordenação
   const handleSort = (field: SortField) => {
@@ -168,26 +185,31 @@ export function CampaignTable({ campaigns, showFilters = true }: CampaignTablePr
     </TableHead>
   )
 
+  // Usar filteredCampaigns (que já trata showFilters)
+  const displayCampaigns = filteredCampaigns
+
   return (
     <div className="space-y-4">
-      <CampaignFilters
-        search={search}
-        onSearchChange={setSearch}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        criadorFilter={criadorFilter}
-        onCriadorChange={setCriadorFilter}
-        nichoFilter={nichoFilter}
-        onNichoChange={setNichoFilter}
-        roiFilter={roiFilter}
-        onRoiChange={setRoiFilter}
-        criadores={criadores}
-        nichos={nichos}
-      />
+      {showFilters && (
+        <CampaignFilters
+          search={search}
+          onSearchChange={setSearch}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          criadorFilter={criadorFilter}
+          onCriadorChange={setCriadorFilter}
+          nichoFilter={nichoFilter}
+          onNichoChange={setNichoFilter}
+          roiFilter={roiFilter}
+          onRoiChange={setRoiFilter}
+          criadores={criadores}
+          nichos={nichos}
+        />
+      )}
 
-          <div className="text-sm text-muted-foreground">
-            Exibindo {displayCampaigns.length} de {campaigns.filter(c => c.status !== 'SEM DADOS').length} campanhas
-          </div>
+      <div className="text-sm text-muted-foreground">
+        Exibindo {displayCampaigns.length} campanhas
+      </div>
 
       <div className="rounded-md border overflow-x-auto">
         <Table>
@@ -205,15 +227,15 @@ export function CampaignTable({ campaigns, showFilters = true }: CampaignTablePr
               <SortableHeader field="orcamento_diario">ORÇAM. DIÁRIO</SortableHeader>
             </TableRow>
           </TableHeader>
-              <TableBody>
-                {displayCampaigns.length === 0 ? (
+          <TableBody>
+            {displayCampaigns.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                  Nenhuma campanha encontrada com os filtros selecionados
+                  Nenhuma campanha encontrada
                 </TableCell>
               </TableRow>
             ) : (
-                  displayCampaigns.map((campaign) => (
+              displayCampaigns.map((campaign) => (
                 <TableRow key={campaign.id}>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(campaign.status)}`}>

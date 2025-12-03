@@ -64,6 +64,7 @@ export interface Campaign {
   tiktok_ctr?: number
   tiktok_cpc?: number
   tiktok_status?: string
+  is_smart_plus?: boolean
   
   // GAM
   gam_revenue?: number

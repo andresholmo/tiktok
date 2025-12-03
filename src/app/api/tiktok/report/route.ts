@@ -69,8 +69,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: reportData.message || 'Erro no relatório' }, { status: 500 })
     }
 
-    // ========== 2. BUSCAR CAMPANHAS (orçamento, status) ==========
-    const campaignUrl = `https://business-api.tiktok.com/open_api/v1.3/campaign/get/?advertiser_id=${advertiserId}&page_size=1000`
+    // ========== 2. BUSCAR CAMPANHAS (orçamento, status, tipo) ==========
+    const campaignParams = new URLSearchParams({
+      advertiser_id: advertiserId,
+      fields: JSON.stringify(['campaign_id', 'campaign_name', 'budget', 'budget_mode', 'operation_status', 'status', 'objective_type', 'is_smart_performance_campaign']),
+      page_size: '1000',
+    })
+    const campaignUrl = `https://business-api.tiktok.com/open_api/v1.3/campaign/get/?${campaignParams.toString()}`
 
     console.log('=== BUSCANDO CAMPANHAS ===')
 
@@ -103,11 +108,17 @@ export async function POST(request: NextRequest) {
         const budgetMode = camp.budget_mode || camp.budget_type || 'BUDGET_MODE_DAY'
         const budget = parseFloat(camp.budget || camp.daily_budget || '0') || 0
         
+        // Identificar Smart Plus
+        const isSmartPlus = camp.is_smart_performance_campaign === true ||
+                           camp.objective_type === 'SMART_PERFORMANCE' ||
+                           (camp.objective_type && camp.objective_type.includes('SMART'))
+        
         campaignMap.set(camp.campaign_id, {
           budget: budget,
           budget_mode: budgetMode,
           status: camp.operation_status || camp.status || 'UNKNOWN',
           campaign_name: camp.campaign_name,
+          is_smart_plus: isSmartPlus,
         })
       }
     }
@@ -158,6 +169,7 @@ export async function POST(request: NextRequest) {
         orcamento_diario: orcamentoDiario,
         budget_mode: campaignInfo.budget_mode || 'BUDGET_MODE_DAY',
         status: status,
+        is_smart_plus: campaignInfo.is_smart_plus || false,
       }
     })
 

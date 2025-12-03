@@ -181,12 +181,16 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                     className={isSelected ? 'bg-blue-50' : ''}
                   >
                     <TableCell>
-                      {campaignId && (
+                      {campaignId && !campaign.is_smart_plus ? (
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(checked) => handleSelectOne(campaignId, checked as boolean)}
                         />
-                      )}
+                      ) : campaign.is_smart_plus ? (
+                        <span className="text-xs text-muted-foreground" title="Smart Plus não editável">
+                          —
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -201,7 +205,19 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                          campaign.status}
                       </span>
                     </TableCell>
-                    <TableCell className="font-medium">{campaign.campanha}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-1">
+                        {campaign.is_smart_plus && (
+                          <span 
+                            className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full" 
+                            title="Smart Plus - Não editável via API"
+                          >
+                            +
+                          </span>
+                        )}
+                        <span>{campaign.campanha}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className={`text-center ${getROIColor(campaign.roi ?? 0)}`}>
                       {formatPercentSafe(campaign.roi)}
                     </TableCell>

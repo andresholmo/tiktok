@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         ctr: tiktokCampaign.ctr || 0,
         ecpm: gamCampaign?.ecpm || 0,
         orcamento_diario: tiktokCampaign.orcamento_diario || 0,
+        is_smart_plus: tiktokCampaign.is_smart_plus || false,
       })
 
       // Remover do mapa para identificar campanhas GAM sem correspondência

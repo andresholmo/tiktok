@@ -24,6 +24,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 interface CampaignTableProps {
   campaigns: Campaign[]
+  showFilters?: boolean
 }
 
 type SortField = 'status' | 'campanha' | 'roi' | 'gasto' | 'ganho' | 'lucro_prejuizo' | 'cpc' | 'ctr' | 'ecpm' | 'orcamento_diario'
@@ -50,7 +51,7 @@ function extractNicho(campanha: string): string {
   return ''
 }
 
-export function CampaignTable({ campaigns }: CampaignTableProps) {
+export function CampaignTable({ campaigns, showFilters = true }: CampaignTableProps) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('todos')
   const [criadorFilter, setCriadorFilter] = useState('todos')
@@ -204,15 +205,15 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
               <SortableHeader field="orcamento_diario">ORÇAM. DIÁRIO</SortableHeader>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {filteredCampaigns.length === 0 ? (
+              <TableBody>
+                {displayCampaigns.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   Nenhuma campanha encontrada com os filtros selecionados
                 </TableCell>
               </TableRow>
             ) : (
-              filteredCampaigns.map((campaign) => (
+                  displayCampaigns.map((campaign) => (
                 <TableRow key={campaign.id}>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(campaign.status)}`}>

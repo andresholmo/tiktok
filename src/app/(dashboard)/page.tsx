@@ -333,7 +333,10 @@ export default function DashboardPage() {
           />
 
           {/* Tabela - recebe campanhas já filtradas */}
-          <CampaignTable campaigns={filteredCampaigns} />
+          <CampaignTable 
+            campaigns={filteredCampaigns}
+            onRefresh={() => fetchData(startDate, endDate)}
+          />
         </>
       ) : (
         <Card>

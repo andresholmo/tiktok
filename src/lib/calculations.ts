@@ -14,8 +14,8 @@ export function calculateTotals(campaigns: Campaign[]): Totals {
   // Filtrar apenas campanhas com dados completos para totais
   const campanhasCompletas = campaigns.filter(c => c.status !== 'SEM DADOS')
   
-  const totalGasto = campanhasCompletas.reduce((sum, c) => sum + c.gasto, 0)
-  const totalGanho = campanhasCompletas.reduce((sum, c) => sum + c.ganho, 0)
+  const totalGasto = campanhasCompletas.reduce((sum, c) => sum + (c.gasto ?? 0), 0)
+  const totalGanho = campanhasCompletas.reduce((sum, c) => sum + (c.ganho ?? 0), 0)
   const totalLucro = totalGanho - totalGasto
   const roiGeral = totalGasto > 0 ? ((totalGanho - totalGasto) / totalGasto) * 100 : 0
 

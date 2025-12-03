@@ -1,55 +1,41 @@
 # Instruções de Migração - Importação Consolidada
 
-## Passo 1: Executar Migração SQL no Supabase
+## ⚠️ IMPORTANTE: Execute a migração SQL antes de usar a funcionalidade!
 
-Antes de usar a funcionalidade de Importação Consolidada, você precisa executar a migração SQL no Supabase:
+## Passo 1: Verificar Schema Atual (Opcional)
+
+Antes de executar a migração, você pode verificar quais colunas já existem:
 
 1. Acesse o Supabase Dashboard
 2. Vá em **SQL Editor**
-3. Execute o conteúdo do arquivo `src/lib/supabase/migration_import_consolidada.sql`
+3. Execute o conteúdo do arquivo `src/lib/supabase/verificar_schema.sql`
 
-Ou copie e cole o seguinte SQL:
+Isso mostrará todas as colunas atuais das tabelas `imports` e `campaigns`.
 
-```sql
--- Migração: Adicionar colunas para importação consolidada TikTok + GAM
+## Passo 2: Executar Migração SQL no Supabase
 
--- Adicionar colunas na tabela imports para suportar período e dados separados
-ALTER TABLE imports 
-  ADD COLUMN IF NOT EXISTS start_date DATE,
-  ADD COLUMN IF NOT EXISTS end_date DATE,
-  ADD COLUMN IF NOT EXISTS tiktok_spend DECIMAL(12,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS tiktok_impressions BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS tiktok_clicks BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_revenue DECIMAL(12,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_faturamento_total DECIMAL(12,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_impressions BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_clicks BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS profit DECIMAL(12,2);
+**OBRIGATÓRIO:** Antes de usar a funcionalidade de Importação Consolidada, você precisa executar a migração SQL no Supabase:
 
--- Adicionar colunas na tabela campaigns para dados separados TikTok e GAM
-ALTER TABLE campaigns
-  ADD COLUMN IF NOT EXISTS campaign_name TEXT,
-  ADD COLUMN IF NOT EXISTS campaign_date DATE,
-  ADD COLUMN IF NOT EXISTS tiktok_campaign_id TEXT,
-  ADD COLUMN IF NOT EXISTS tiktok_spend DECIMAL(12,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS tiktok_impressions BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS tiktok_clicks BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS tiktok_ctr DECIMAL(8,4) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS tiktok_cpc DECIMAL(8,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_revenue DECIMAL(12,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_impressions BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_clicks BIGINT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_ctr DECIMAL(8,4) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS gam_ecpm DECIMAL(10,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS profit DECIMAL(12,2);
+1. Acesse o Supabase Dashboard
+2. Vá em **SQL Editor**
+3. Execute o conteúdo do arquivo `src/lib/supabase/migration_import_consolidada_completa.sql`
 
--- Criar índices para melhor performance
-CREATE INDEX IF NOT EXISTS idx_imports_start_end_date ON imports(start_date, end_date);
-CREATE INDEX IF NOT EXISTS idx_campaigns_campaign_name ON campaigns(campaign_name);
-CREATE INDEX IF NOT EXISTS idx_campaigns_campaign_date ON campaigns(campaign_date);
-```
+Este script:
+- ✅ Verifica se cada coluna existe antes de adicionar (seguro para executar múltiplas vezes)
+- ✅ Adiciona todas as colunas necessárias nas tabelas `imports` e `campaigns`
+- ✅ Cria índices para melhor performance
+- ✅ Mostra um resumo das colunas adicionadas ao final
 
-## Passo 2: Testar a Funcionalidade
+## Passo 3: Verificar Migração
+
+Após executar a migração, execute novamente o script de verificação (`verificar_schema.sql`) para confirmar que todas as colunas foram adicionadas.
+
+Você deve ver:
+- ✓ `start_date` e `end_date` em `imports`
+- ✓ `campaign_name` em `campaigns`
+- ✓ Todas as outras colunas TikTok e GAM
+
+## Passo 4: Testar a Funcionalidade
 
 Após executar a migração:
 
@@ -65,9 +51,24 @@ O sistema irá:
 - Calcular ROI e lucro/prejuízo
 - Salvar tudo no banco de dados
 
+## Resolução de Problemas
+
+### Erro: "Could not find the 'end_date' column"
+
+Este erro significa que a migração SQL não foi executada. Siga os passos acima.
+
+### Erro: "column does not exist"
+
+A API agora detecta automaticamente se as colunas não existem e fornece uma mensagem de erro clara indicando qual arquivo de migração executar.
+
+### A API funciona mesmo sem a migração?
+
+A API foi atualizada para ser mais resiliente e tentar funcionar com as colunas antigas, mas **recomendamos fortemente executar a migração** para ter acesso a todas as funcionalidades.
+
 ## Notas
 
-- A migração é **não-destrutiva**: apenas adiciona novas colunas
-- Os campos antigos são mantidos para compatibilidade
-- A funcionalidade funciona mesmo se algumas colunas não existirem (usando valores padrão)
+- ✅ A migração é **não-destrutiva**: apenas adiciona novas colunas
+- ✅ Os campos antigos são mantidos para compatibilidade
+- ✅ O script pode ser executado múltiplas vezes sem problemas
+- ✅ A API tenta funcionar mesmo sem as colunas novas, mas com funcionalidade limitada
 

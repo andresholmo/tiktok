@@ -146,13 +146,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se já existe importação para esse período
-    const { data: existingImport } = await supabase
-      .from('imports')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('start_date', startDate)
-      .eq('end_date', endDate)
-      .maybeSingle()
+    // Usar date (coluna antiga) se start_date/end_date não existirem
+    let existingImport
+    try {
+      const { data, error } = await supabase
+        .from('imports')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('start_date', startDate)
+        .eq('end_date', endDate)
+        .maybeSingle()
+      
+      if (error && error.message?.includes('column') && error.message?.includes('does not exist')) {
+        // Se as colunas não existem, usar a coluna date antiga
+        const { data: fallbackData } = await supabase
+          .from('imports')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('date', startDate)
+          .maybeSingle()
+        existingImport = fallbackData
+      } else {
+        existingImport = data
+      }
+    } catch (e) {
+      // Fallback: usar coluna date
+      const { data } = await supabase
+        .from('imports')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', startDate)
+        .maybeSingle()
+      existingImport = data
+    }
 
     let importRecord
 
@@ -164,71 +190,141 @@ export async function POST(request: NextRequest) {
         .eq('import_id', existingImport.id)
 
       // Atualizar importação existente
+      // Construir objeto de update dinamicamente para evitar erros com colunas inexistentes
+      const updateData: any = {
+        date: startDate, // Manter compatibilidade
+        created_at: new Date().toISOString(),
+        roi_geral: roi,
+        roi_real: roi, // Compatibilidade
+        profit: profit,
+        lucro_real: profit, // Compatibilidade
+        total_gasto: totalSpend, // Compatibilidade
+        total_ganho: totalRevenue, // Compatibilidade
+        total_lucro: profit, // Compatibilidade
+        faturamento_tiktok: gam.faturamentoTotal || 0, // Compatibilidade
+      }
+
+      // Adicionar colunas novas apenas se existirem (será ignorado se não existir)
+      try {
+        updateData.start_date = startDate
+        updateData.end_date = endDate
+        updateData.tiktok_spend = totalSpend
+        updateData.tiktok_impressions = tiktok.totalImpressions || 0
+        updateData.tiktok_clicks = tiktok.totalClicks || 0
+        updateData.gam_revenue = gam.totalRevenue || 0
+        updateData.gam_faturamento_total = gam.faturamentoTotal || 0
+        updateData.gam_impressions = gam.totalImpressions || 0
+        updateData.gam_clicks = gam.totalClicks || 0
+      } catch (e) {
+        // Ignorar se colunas não existirem
+      }
+
       const { data: updatedImport, error: updateError } = await supabase
         .from('imports')
-        .update({
-          date: startDate, // Manter compatibilidade
-          created_at: new Date().toISOString(),
-          start_date: startDate,
-          end_date: endDate,
-          tiktok_spend: totalSpend,
-          tiktok_impressions: tiktok.totalImpressions || 0,
-          tiktok_clicks: tiktok.totalClicks || 0,
-          gam_revenue: gam.totalRevenue || 0,
-          gam_faturamento_total: gam.faturamentoTotal || 0,
-          gam_impressions: gam.totalImpressions || 0,
-          gam_clicks: gam.totalClicks || 0,
-          roi_geral: roi,
-          roi_real: roi, // Compatibilidade
-          profit: profit,
-          lucro_real: profit, // Compatibilidade
-          total_gasto: totalSpend, // Compatibilidade
-          total_ganho: totalRevenue, // Compatibilidade
-          total_lucro: profit, // Compatibilidade
-          faturamento_tiktok: gam.faturamentoTotal || 0, // Compatibilidade
-        })
+        .update(updateData)
         .eq('id', existingImport.id)
         .select()
         .single()
 
       if (updateError) {
-        throw updateError
+        // Se erro for por coluna inexistente, tentar sem as colunas novas
+        if (updateError.message?.includes('column') && updateError.message?.includes('does not exist')) {
+          const { data: fallbackImport, error: fallbackError } = await supabase
+            .from('imports')
+            .update({
+              date: startDate,
+              created_at: new Date().toISOString(),
+              roi_geral: roi,
+              roi_real: roi,
+              profit: profit,
+              lucro_real: profit,
+              total_gasto: totalSpend,
+              total_ganho: totalRevenue,
+              total_lucro: profit,
+              faturamento_tiktok: gam.faturamentoTotal || 0,
+            })
+            .eq('id', existingImport.id)
+            .select()
+            .single()
+          
+          if (fallbackError) {
+            throw new Error(`Erro ao atualizar importação. Execute a migração SQL primeiro: ${fallbackError.message}`)
+          }
+          importRecord = fallbackImport
+        } else {
+          throw updateError
+        }
+      } else {
+        importRecord = updatedImport
       }
 
       importRecord = updatedImport
     } else {
       // Criar nova importação
+      const insertData: any = {
+        date: startDate, // Manter compatibilidade
+        user_id: user.id,
+        roi_geral: roi,
+        roi_real: roi, // Compatibilidade
+        profit: profit,
+        lucro_real: profit, // Compatibilidade
+        total_gasto: totalSpend, // Compatibilidade
+        total_ganho: totalRevenue, // Compatibilidade
+        total_lucro: profit, // Compatibilidade
+        faturamento_tiktok: gam.faturamentoTotal || 0, // Compatibilidade
+      }
+
+      // Adicionar colunas novas se existirem
+      try {
+        insertData.start_date = startDate
+        insertData.end_date = endDate
+        insertData.tiktok_spend = totalSpend
+        insertData.tiktok_impressions = tiktok.totalImpressions || 0
+        insertData.tiktok_clicks = tiktok.totalClicks || 0
+        insertData.gam_revenue = gam.totalRevenue || 0
+        insertData.gam_faturamento_total = gam.faturamentoTotal || 0
+        insertData.gam_impressions = gam.totalImpressions || 0
+        insertData.gam_clicks = gam.totalClicks || 0
+      } catch (e) {
+        // Ignorar
+      }
+
       const { data: newImport, error: insertError } = await supabase
         .from('imports')
-        .insert({
-          date: startDate, // Manter compatibilidade
-          user_id: user.id,
-          start_date: startDate,
-          end_date: endDate,
-          tiktok_spend: totalSpend,
-          tiktok_impressions: tiktok.totalImpressions || 0,
-          tiktok_clicks: tiktok.totalClicks || 0,
-          gam_revenue: gam.totalRevenue || 0,
-          gam_faturamento_total: gam.faturamentoTotal || 0,
-          gam_impressions: gam.totalImpressions || 0,
-          gam_clicks: gam.totalClicks || 0,
-          roi_geral: roi,
-          roi_real: roi, // Compatibilidade
-          profit: profit,
-          lucro_real: profit, // Compatibilidade
-          total_gasto: totalSpend, // Compatibilidade
-          total_ganho: totalRevenue, // Compatibilidade
-          total_lucro: profit, // Compatibilidade
-          faturamento_tiktok: gam.faturamentoTotal || 0, // Compatibilidade
-        })
+        .insert(insertData)
         .select()
         .single()
 
       if (insertError) {
-        throw insertError
+        // Se erro for por coluna inexistente, tentar sem as colunas novas
+        if (insertError.message?.includes('column') && insertError.message?.includes('does not exist')) {
+          const { data: fallbackImport, error: fallbackError } = await supabase
+            .from('imports')
+            .insert({
+              date: startDate,
+              user_id: user.id,
+              roi_geral: roi,
+              roi_real: roi,
+              profit: profit,
+              lucro_real: profit,
+              total_gasto: totalSpend,
+              total_ganho: totalRevenue,
+              total_lucro: profit,
+              faturamento_tiktok: gam.faturamentoTotal || 0,
+            })
+            .select()
+            .single()
+          
+          if (fallbackError) {
+            throw new Error(`Erro ao criar importação. Execute a migração SQL primeiro: ${fallbackError.message}`)
+          }
+          importRecord = fallbackImport
+        } else {
+          throw insertError
+        }
+      } else {
+        importRecord = newImport
       }
-
-      importRecord = newImport
     }
 
     // Inserir campanhas
@@ -262,8 +358,23 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Erro ao salvar importação:', error)
+    
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    
+    // Verificar se é erro de coluna inexistente
+    if (errorMessage.includes('column') && errorMessage.includes('does not exist')) {
+      return NextResponse.json(
+        { 
+          error: 'Colunas do banco de dados não encontradas',
+          details: 'Execute a migração SQL em src/lib/supabase/migration_import_consolidada_completa.sql no Supabase SQL Editor',
+          migrationFile: 'src/lib/supabase/migration_import_consolidada_completa.sql'
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Erro ao salvar importação', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Erro ao salvar importação', details: errorMessage },
       { status: 500 }
     )
   }

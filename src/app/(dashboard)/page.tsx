@@ -37,6 +37,16 @@ export default function DashboardPage() {
 
       setLatestImport(importData)
 
+      // Debug: mostrar valores
+      console.log('Import Data:', {
+        gam_revenue: importData?.gam_revenue,
+        gam_faturamento_total: importData?.gam_faturamento_total,
+        total_ganho: importData?.total_ganho,
+        faturamento_tiktok: importData?.faturamento_tiktok,
+        tiktok_spend: importData?.tiktok_spend,
+        total_gasto: importData?.total_gasto,
+      })
+
       const { data: campaignsData, error: campaignsError } = await supabase
         .from('campaigns')
         .select('*')
@@ -95,11 +105,11 @@ export default function DashboardPage() {
       </div>
 
       <SummaryCards
-        totalGasto={Number(latestImport.total_gasto ?? 0)}
-        totalGanho={Number(latestImport.total_ganho ?? 0)}
-        totalLucro={Number(latestImport.total_lucro ?? 0)}
+        totalGasto={Number(latestImport.tiktok_spend ?? latestImport.total_gasto ?? 0)}
+        totalGanho={Number(latestImport.gam_revenue ?? latestImport.total_ganho ?? 0)}
+        totalLucro={Number(latestImport.profit ?? latestImport.total_lucro ?? 0)}
         roiGeral={Number(latestImport.roi_geral ?? 0)}
-        faturamentoTiktok={Number(latestImport.faturamento_tiktok ?? 0)}
+        faturamentoTiktok={Number(latestImport.gam_faturamento_total ?? latestImport.faturamento_tiktok ?? 0)}
         lucroReal={Number(latestImport.lucro_real ?? 0)}
         roiReal={Number(latestImport.roi_real ?? 0)}
       />

@@ -57,9 +57,18 @@ export async function POST(request: NextRequest) {
 
     // Calcular ROI geral
     const totalSpend = tiktok.totalSpend || 0
-    const totalRevenue = gam.faturamentoTotal || gam.totalRevenue || 0
-    const profit = totalRevenue - totalSpend
-    const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0
+    // gam.totalRevenue = soma das campanhas rastreadas (GUP-01)
+    // gam.faturamentoTotal = total por utm_source=tiktok (inclui não rastreado)
+    const gamRevenue = gam.totalRevenue || 0  // Ganho Rastreado
+    const gamFaturamentoTotal = gam.faturamentoTotal || 0  // Faturamento TikTok Total
+    
+    // ROI Rastreado (usando apenas campanhas rastreadas)
+    const profitRastreado = gamRevenue - totalSpend
+    const roiRastreado = totalSpend > 0 ? ((gamRevenue - totalSpend) / totalSpend) * 100 : 0
+    
+    // ROI Real (usando faturamento total)
+    const profitReal = gamFaturamentoTotal - totalSpend
+    const roiReal = totalSpend > 0 ? ((gamFaturamentoTotal - totalSpend) / totalSpend) * 100 : 0
 
     // Criar mapa de campanhas GAM por nome (normalizado)
     const gamMap = new Map<string, GAMCampaign>()
@@ -194,14 +203,14 @@ export async function POST(request: NextRequest) {
       const updateData: any = {
         date: startDate, // Manter compatibilidade
         created_at: new Date().toISOString(),
-        roi_geral: roi,
-        roi_real: roi, // Compatibilidade
-        profit: profit,
-        lucro_real: profit, // Compatibilidade
+        roi_geral: roiRastreado, // ROI Rastreado
+        roi_real: roiReal, // ROI Real
+        profit: profitRastreado, // Lucro Rastreado
+        lucro_real: profitReal, // Lucro Real
         total_gasto: totalSpend, // Compatibilidade
-        total_ganho: totalRevenue, // Compatibilidade
-        total_lucro: profit, // Compatibilidade
-        faturamento_tiktok: gam.faturamentoTotal || 0, // Compatibilidade
+        total_ganho: gamRevenue, // Ganho Rastreado (soma das campanhas)
+        total_lucro: profitRastreado, // Lucro Rastreado
+        faturamento_tiktok: gamFaturamentoTotal, // Faturamento TikTok Total
       }
 
       // Adicionar colunas novas apenas se existirem (será ignorado se não existir)
@@ -211,8 +220,8 @@ export async function POST(request: NextRequest) {
         updateData.tiktok_spend = totalSpend
         updateData.tiktok_impressions = tiktok.totalImpressions || 0
         updateData.tiktok_clicks = tiktok.totalClicks || 0
-        updateData.gam_revenue = gam.totalRevenue || 0
-        updateData.gam_faturamento_total = gam.faturamentoTotal || 0
+        updateData.gam_revenue = gamRevenue
+        updateData.gam_faturamento_total = gamFaturamentoTotal
         updateData.gam_impressions = gam.totalImpressions || 0
         updateData.gam_clicks = gam.totalClicks || 0
       } catch (e) {
@@ -234,14 +243,14 @@ export async function POST(request: NextRequest) {
             .update({
               date: startDate,
               created_at: new Date().toISOString(),
-              roi_geral: roi,
-              roi_real: roi,
-              profit: profit,
-              lucro_real: profit,
+              roi_geral: roiRastreado,
+              roi_real: roiReal,
+              profit: profitRastreado,
+              lucro_real: profitReal,
               total_gasto: totalSpend,
-              total_ganho: totalRevenue,
-              total_lucro: profit,
-              faturamento_tiktok: gam.faturamentoTotal || 0,
+              total_ganho: gamRevenue,
+              total_lucro: profitRastreado,
+              faturamento_tiktok: gamFaturamentoTotal,
             })
             .eq('id', existingImport.id)
             .select()
@@ -264,14 +273,14 @@ export async function POST(request: NextRequest) {
       const insertData: any = {
         date: startDate, // Manter compatibilidade
         user_id: user.id,
-        roi_geral: roi,
-        roi_real: roi, // Compatibilidade
-        profit: profit,
-        lucro_real: profit, // Compatibilidade
+        roi_geral: roiRastreado, // ROI Rastreado
+        roi_real: roiReal, // ROI Real
+        profit: profitRastreado, // Lucro Rastreado
+        lucro_real: profitReal, // Lucro Real
         total_gasto: totalSpend, // Compatibilidade
-        total_ganho: totalRevenue, // Compatibilidade
-        total_lucro: profit, // Compatibilidade
-        faturamento_tiktok: gam.faturamentoTotal || 0, // Compatibilidade
+        total_ganho: gamRevenue, // Ganho Rastreado (soma das campanhas)
+        total_lucro: profitRastreado, // Lucro Rastreado
+        faturamento_tiktok: gamFaturamentoTotal, // Faturamento TikTok Total
       }
 
       // Adicionar colunas novas se existirem
@@ -281,8 +290,8 @@ export async function POST(request: NextRequest) {
         insertData.tiktok_spend = totalSpend
         insertData.tiktok_impressions = tiktok.totalImpressions || 0
         insertData.tiktok_clicks = tiktok.totalClicks || 0
-        insertData.gam_revenue = gam.totalRevenue || 0
-        insertData.gam_faturamento_total = gam.faturamentoTotal || 0
+        insertData.gam_revenue = gamRevenue
+        insertData.gam_faturamento_total = gamFaturamentoTotal
         insertData.gam_impressions = gam.totalImpressions || 0
         insertData.gam_clicks = gam.totalClicks || 0
       } catch (e) {
@@ -303,14 +312,14 @@ export async function POST(request: NextRequest) {
             .insert({
               date: startDate,
               user_id: user.id,
-              roi_geral: roi,
-              roi_real: roi,
-              profit: profit,
-              lucro_real: profit,
+              roi_geral: roiRastreado,
+              roi_real: roiReal,
+              profit: profitRastreado,
+              lucro_real: profitReal,
               total_gasto: totalSpend,
-              total_ganho: totalRevenue,
-              total_lucro: profit,
-              faturamento_tiktok: gam.faturamentoTotal || 0,
+              total_ganho: gamRevenue,
+              total_lucro: profitRastreado,
+              faturamento_tiktok: gamFaturamentoTotal,
             })
             .select()
             .single()
@@ -342,7 +351,16 @@ export async function POST(request: NextRequest) {
       throw campaignsError
     }
 
-    console.log(`Importação salva: ${campaignDataList.length} campanhas, ROI: ${(roi ?? 0).toFixed(2)}%`)
+    console.log(`Importação salva: ${campaignDataList.length} campanhas`)
+    console.log('Valores:', {
+      tiktokSpend: totalSpend,
+      gamRevenue: gamRevenue, // Ganho Rastreado
+      gamFaturamentoTotal: gamFaturamentoTotal, // Faturamento Total
+      profitRastreado: profitRastreado,
+      roiRastreado: roiRastreado,
+      profitReal: profitReal,
+      roiReal: roiReal,
+    })
 
     return NextResponse.json({
       success: true,
@@ -350,9 +368,12 @@ export async function POST(request: NextRequest) {
       summary: {
         totalCampaigns: campaignDataList.length,
         tiktokSpend: totalSpend || 0,
-        gamRevenue: totalRevenue || 0,
-        profit: profit || 0,
-        roi: roi || 0,
+        gamRevenue: gamRevenue || 0, // Ganho Rastreado
+        gamFaturamentoTotal: gamFaturamentoTotal || 0, // Faturamento Total
+        profitRastreado: profitRastreado || 0,
+        roiRastreado: roiRastreado || 0,
+        profitReal: profitReal || 0,
+        roiReal: roiReal || 0,
       },
     })
 

@@ -22,8 +22,18 @@ interface ImportResult {
 }
 
 export function ImportConsolidated() {
-  const [startDate, setStartDate] = useState(() => getTodayBR())
-  const [endDate, setEndDate] = useState(() => getTodayBR())
+  // Calcular últimos 30 dias por padrão
+  const getDefaultDates = () => {
+    const end = getTodayBR()
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - 29)
+    const start = startDate.toISOString().split('T')[0]
+    return { start, end }
+  }
+
+  const { start, end } = getDefaultDates()
+  const [startDate, setStartDate] = useState(start)
+  const [endDate, setEndDate] = useState(end)
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)

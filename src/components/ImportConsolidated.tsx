@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Save, TrendingUp, TrendingDown, Target } from 'lucide-react'
 import { getTodayBR } from '@/lib/date-utils'
+import { formatCurrencyBRL, formatPercentSafe } from '@/lib/utils'
 
 interface ImportResult {
   success: boolean
@@ -27,12 +28,6 @@ export function ImportConsolidated() {
   const [progress, setProgress] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL' 
-    }).format(value)
-  }
 
   const handleFetchAll = async () => {
     setLoading(true)
@@ -179,7 +174,7 @@ export function ImportConsolidated() {
                   <div className="bg-white p-3 rounded-lg border">
                     <div className="text-xs text-muted-foreground">Gasto TikTok</div>
                     <div className="text-lg font-bold text-red-600">
-                      {formatCurrency(result.summary.tiktokSpend)}
+                      {formatCurrencyBRL(result.summary?.tiktokSpend)}
                     </div>
                   </div>
 
@@ -187,36 +182,36 @@ export function ImportConsolidated() {
                   <div className="bg-white p-3 rounded-lg border">
                     <div className="text-xs text-muted-foreground">Receita GAM</div>
                     <div className="text-lg font-bold text-green-600">
-                      {formatCurrency(result.summary.gamRevenue)}
+                      {formatCurrencyBRL(result.summary?.gamRevenue)}
                     </div>
                   </div>
 
                   {/* Lucro/Prejuízo */}
                   <div className="bg-white p-3 rounded-lg border">
                     <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      {result.summary.profit >= 0 ? (
+                      {(result.summary?.profit ?? 0) >= 0 ? (
                         <TrendingUp className="h-3 w-3 text-green-600" />
                       ) : (
                         <TrendingDown className="h-3 w-3 text-red-600" />
                       )}
-                      {result.summary.profit >= 0 ? 'Lucro' : 'Prejuízo'}
+                      {(result.summary?.profit ?? 0) >= 0 ? 'Lucro' : 'Prejuízo'}
                     </div>
-                    <div className={`text-lg font-bold ${result.summary.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(Math.abs(result.summary.profit))}
+                    <div className={`text-lg font-bold ${(result.summary?.profit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrencyBRL(Math.abs(result.summary?.profit ?? 0))}
                     </div>
                   </div>
 
                   {/* ROI */}
                   <div className="bg-white p-3 rounded-lg border">
                     <div className="text-xs text-muted-foreground">ROI</div>
-                    <div className={`text-lg font-bold ${result.summary.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {result.summary.roi.toFixed(2)}%
+                    <div className={`text-lg font-bold ${(result.summary?.roi ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPercentSafe(result.summary?.roi)}
                     </div>
                   </div>
                 </div>
 
                 <div className="text-sm text-green-700 text-center">
-                  ✓ {result.summary.totalCampaigns} campanhas importadas com sucesso
+                  ✓ {result.summary?.totalCampaigns ?? 0} campanhas importadas com sucesso
                 </div>
               </div>
             ) : (

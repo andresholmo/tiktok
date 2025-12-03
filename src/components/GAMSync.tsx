@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RefreshCw, Download, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { getTodayBR } from '@/lib/date-utils'
+import { formatCurrencyBRL, formatPercentSafe } from '@/lib/utils'
 
 interface Campaign {
   data: string
@@ -80,12 +81,6 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
     }
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL' 
-    }).format(value)
-  }
 
   return (
     <Card>
@@ -140,7 +135,7 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
                     <span className="font-medium">{result.data.total} campanhas</span>
                   </div>
                   <div className="text-lg font-bold">
-                    {formatCurrency(result.data.totalReceita)}
+                    {formatCurrencyBRL(result.data?.totalReceita)}
                   </div>
                 </div>
                 
@@ -162,9 +157,9 @@ export function GAMSync({ onSyncComplete }: GAMSyncProps) {
                             <td className="p-1 truncate max-w-[120px]" title={c.campanha}>
                               {c.campanha}
                             </td>
-                            <td className="text-right p-1">{formatCurrency(c.receita)}</td>
-                            <td className="text-right p-1">{formatCurrency(c.ecpm)}</td>
-                            <td className="text-right p-1">{c.ctr.toFixed(2)}%</td>
+                            <td className="text-right p-1">{formatCurrencyBRL(c.receita)}</td>
+                            <td className="text-right p-1">{formatCurrencyBRL(c.ecpm)}</td>
+                            <td className="text-right p-1">{formatPercentSafe(c.ctr)}</td>
                           </tr>
                         ))}
                       </tbody>

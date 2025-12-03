@@ -95,13 +95,13 @@ export default function DashboardPage() {
       </div>
 
       <SummaryCards
-        totalGasto={Number(latestImport.total_gasto)}
-        totalGanho={Number(latestImport.total_ganho)}
-        totalLucro={Number(latestImport.total_lucro)}
-        roiGeral={Number(latestImport.roi_geral)}
-        faturamentoTiktok={Number(latestImport.faturamento_tiktok)}
-        lucroReal={Number(latestImport.lucro_real)}
-        roiReal={Number(latestImport.roi_real)}
+        totalGasto={Number(latestImport.total_gasto ?? 0)}
+        totalGanho={Number(latestImport.total_ganho ?? 0)}
+        totalLucro={Number(latestImport.total_lucro ?? 0)}
+        roiGeral={Number(latestImport.roi_geral ?? 0)}
+        faturamentoTiktok={Number(latestImport.faturamento_tiktok ?? 0)}
+        lucroReal={Number(latestImport.lucro_real ?? 0)}
+        roiReal={Number(latestImport.roi_real ?? 0)}
       />
 
       <Card>

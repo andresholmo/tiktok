@@ -11,6 +11,7 @@ import { ImportConsolidated } from '@/components/ImportConsolidated'
 import { SummaryCards } from '@/components/SummaryCards'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, AlertCircle } from 'lucide-react'
+import { formatCurrencyBRL, formatPercentSafe, safeToFixed } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,10 +103,10 @@ export default function ImportarPage() {
                           {c.status}
                         </span>
                       </td>
-                      <td className="text-right p-2">R$ {c.gasto.toFixed(2)}</td>
-                      <td className="text-right p-2">R$ {c.cpc.toFixed(2)}</td>
-                      <td className="text-right p-2">{c.ctr.toFixed(2)}%</td>
-                      <td className="text-right p-2">R$ {c.orcamento_diario.toFixed(2)}</td>
+                      <td className="text-right p-2">{formatCurrencyBRL(c.gasto)}</td>
+                      <td className="text-right p-2">{formatCurrencyBRL(c.cpc)}</td>
+                      <td className="text-right p-2">{formatPercentSafe(c.ctr)}</td>
+                      <td className="text-right p-2">{formatCurrencyBRL(c.orcamento_diario)}</td>
                     </tr>
                   ))}
                 </tbody>

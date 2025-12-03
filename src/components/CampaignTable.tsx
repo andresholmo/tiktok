@@ -107,9 +107,9 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
 
     // Filtro de ROI
     if (roiFilter === 'positivo') {
-      filtered = filtered.filter(c => c.roi >= 0)
+      filtered = filtered.filter(c => (c.roi ?? 0) >= 0)
     } else if (roiFilter === 'negativo') {
-      filtered = filtered.filter(c => c.roi < 0)
+      filtered = filtered.filter(c => (c.roi ?? 0) < 0)
     }
 
     // Ordenação
@@ -219,21 +219,21 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                     </span>
                   </TableCell>
                   <TableCell className="font-medium">{campaign.campanha}</TableCell>
-                  <TableCell className={`text-center ${getROIColor(campaign.roi)}`}>
+                  <TableCell className={`text-center ${getROIColor(campaign.roi ?? 0)}`}>
                     {formatPercent(campaign.roi)}
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(campaign.gasto)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(campaign.ganho)}</TableCell>
-                  <TableCell className={`text-right ${getLucroColor(campaign.lucro_prejuizo)}`}>
+                  <TableCell className={`text-right ${getLucroColor(campaign.lucro_prejuizo ?? 0)}`}>
                     {formatCurrency(campaign.lucro_prejuizo)}
                   </TableCell>
-                  <TableCell className={`text-center ${getCPCColor(campaign.cpc)}`}>
+                  <TableCell className={`text-center ${getCPCColor(campaign.cpc ?? 0)}`}>
                     {formatCurrency(campaign.cpc)}
                   </TableCell>
-                  <TableCell className={`text-center ${getCTRColor(campaign.ctr)}`}>
-                    {formatPercent(campaign.ctr * 100)}
+                  <TableCell className={`text-center ${getCTRColor((campaign.ctr ?? 0) * 100)}`}>
+                    {formatPercent((campaign.ctr ?? 0) * 100)}
                   </TableCell>
-                  <TableCell className={`text-center ${getECPMColor(campaign.ecpm)}`}>
+                  <TableCell className={`text-center ${getECPMColor(campaign.ecpm ?? 0)}`}>
                     {formatCurrency(campaign.ecpm)}
                   </TableCell>
                   <TableCell className="text-center">

@@ -342,17 +342,17 @@ export async function POST(request: NextRequest) {
       throw campaignsError
     }
 
-    console.log(`Importação salva: ${campaignDataList.length} campanhas, ROI: ${roi.toFixed(2)}%`)
+    console.log(`Importação salva: ${campaignDataList.length} campanhas, ROI: ${(roi ?? 0).toFixed(2)}%`)
 
     return NextResponse.json({
       success: true,
       import: importRecord,
       summary: {
         totalCampaigns: campaignDataList.length,
-        tiktokSpend: totalSpend,
-        gamRevenue: totalRevenue,
-        profit,
-        roi,
+        tiktokSpend: totalSpend || 0,
+        gamRevenue: totalRevenue || 0,
+        profit: profit || 0,
+        roi: roi || 0,
       },
     })
 

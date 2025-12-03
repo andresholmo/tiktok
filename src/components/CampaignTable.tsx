@@ -111,7 +111,7 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
       className="text-white font-bold cursor-pointer hover:bg-blue-700 transition-colors select-none"
       onClick={() => handleSort(field)}
     >
-      <div className="flex items-center">
+      <div className="flex items-center text-white">
         {children}
         <SortIcon field={field} />
       </div>

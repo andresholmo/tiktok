@@ -45,8 +45,12 @@ export function getCPCColor(cpc: number): string {
 }
 
 export function getCTRColor(ctr: number): string {
-  if (ctr >= 0.05) return 'bg-green-200'
-  if (ctr >= 0.03) return 'bg-yellow-200'
+  // CTR pode vir em formato percentual (2.24 = 2.24%) ou decimal (0.0224 = 2.24%)
+  // Normalizar para percentual para comparação
+  const ctrPercent = ctr >= 1 ? ctr : ctr * 100
+  
+  if (ctrPercent >= 5) return 'bg-green-200'
+  if (ctrPercent >= 3) return 'bg-yellow-200'
   return 'bg-red-200'
 }
 

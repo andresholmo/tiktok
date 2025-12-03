@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Campaign } from '@/types'
-import { formatCurrency, formatPercent } from '@/lib/utils'
+import { formatCurrency, formatPercentSafe } from '@/lib/utils'
 import {
   getROIColor,
   getCPCColor,
@@ -230,8 +230,8 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
                   <TableCell className={`text-center ${getCPCColor(campaign.cpc ?? 0)}`}>
                     {formatCurrency(campaign.cpc)}
                   </TableCell>
-                  <TableCell className={`text-center ${getCTRColor((campaign.ctr ?? 0) * 100)}`}>
-                    {formatPercent((campaign.ctr ?? 0) * 100)}
+                  <TableCell className={`text-center ${getCTRColor(campaign.ctr ?? 0)}`}>
+                    {formatPercentSafe(campaign.ctr ?? 0)}
                   </TableCell>
                   <TableCell className={`text-center ${getECPMColor(campaign.ecpm ?? 0)}`}>
                     {formatCurrency(campaign.ecpm)}

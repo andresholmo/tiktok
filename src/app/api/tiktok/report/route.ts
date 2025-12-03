@@ -133,6 +133,8 @@ export async function POST(request: NextRequest) {
         status = 'ATIVO'
       }
 
+      // CTR da API do TikTok já vem em formato percentual (ex: 2.24 = 2.24%)
+      // NÃO multiplicar por 100
       const ctrValue = parseFloat(metrics.ctr) || 0
 
       // Determinar orçamento diário
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
         campanha: metrics.campaign_name || campaignInfo.campaign_name || 'Sem nome',
         gasto: parseFloat(metrics.spend) || 0,
         cpc: parseFloat(metrics.cpc) || 0,
-        ctr: ctrValue < 1 ? ctrValue * 100 : ctrValue, // Converter para percentual se necessário
+        ctr: ctrValue, // CTR já vem em formato percentual da API do TikTok
         impressoes: parseInt(metrics.impressions) || 0,
         cliques: parseInt(metrics.clicks) || 0,
         orcamento_diario: orcamentoDiario,

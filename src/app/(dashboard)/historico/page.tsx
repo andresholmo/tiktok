@@ -101,16 +101,16 @@ export default function HistoricoPage() {
                       {formatDate(imp.created_at)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(Number(imp.total_gasto))}
+                      {formatCurrency(Number(imp.tiktok_spend ?? imp.total_gasto ?? 0))}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(Number(imp.total_ganho))}
+                      {formatCurrency(Number(imp.gam_revenue ?? imp.total_ganho ?? 0))}
                     </TableCell>
-                    <TableCell className={`text-right ${Number(imp.total_lucro) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(Number(imp.total_lucro))}
+                    <TableCell className={`text-right ${Number(imp.profit ?? imp.total_lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(Number(imp.profit ?? imp.total_lucro ?? 0))}
                     </TableCell>
-                    <TableCell className={`text-center ${Number(imp.roi_geral) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatPercent(Number(imp.roi_geral))}
+                    <TableCell className={`text-center ${Number(imp.roi_geral ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPercent(Number(imp.roi_geral ?? 0))}
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-2">

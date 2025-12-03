@@ -7,6 +7,7 @@ import { TikTokConnect } from '@/components/TikTokConnect'
 import { TikTokSync } from '@/components/TikTokSync'
 import { GAMConnect } from '@/components/GAMConnect'
 import { GAMSync } from '@/components/GAMSync'
+import { ImportConsolidated } from '@/components/ImportConsolidated'
 import { SummaryCards } from '@/components/SummaryCards'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, AlertCircle } from 'lucide-react'
@@ -124,6 +125,9 @@ export default function ImportarPage() {
         <GAMConnect />
         <GAMSync onSyncComplete={(data) => console.log('GAM Data:', data)} />
       </div>
+
+      {/* Importação Consolidada + ROI */}
+      <ImportConsolidated />
 
       {/* Upload Manual */}
       <Card>

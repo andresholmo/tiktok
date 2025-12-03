@@ -104,15 +104,43 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <SummaryCards
-        totalGasto={Number(latestImport.tiktok_spend ?? latestImport.total_gasto ?? 0)}
-        totalGanho={Number(latestImport.gam_revenue ?? latestImport.total_ganho ?? 0)}
-        totalLucro={Number(latestImport.profit ?? latestImport.total_lucro ?? 0)}
-        roiGeral={Number(latestImport.roi_geral ?? 0)}
-        faturamentoTiktok={Number(latestImport.gam_faturamento_total ?? latestImport.faturamento_tiktok ?? 0)}
-        lucroReal={Number(latestImport.lucro_real ?? 0)}
-        roiReal={Number(latestImport.roi_real ?? 0)}
-      />
+      {(() => {
+        // Valores do banco
+        const gastoTotal = Number(latestImport.tiktok_spend ?? latestImport.total_gasto ?? 0)
+        const ganhoRastreado = Number(latestImport.gam_revenue ?? latestImport.total_ganho ?? 0)  // Soma das campanhas GUP-01
+        const faturamentoTikTok = Number(latestImport.gam_faturamento_total ?? latestImport.faturamento_tiktok ?? 0)  // Total utm_source
+
+        // Cálculos RASTREADOS (baseado nas campanhas que conseguimos rastrear)
+        const lucroRastreado = ganhoRastreado - gastoTotal
+        const roiRastreado = gastoTotal > 0 ? ((ganhoRastreado - gastoTotal) / gastoTotal) * 100 : 0
+
+        // Cálculos REAIS (baseado no faturamento total)
+        const lucroReal = faturamentoTikTok - gastoTotal
+        const roiReal = gastoTotal > 0 ? ((faturamentoTikTok - gastoTotal) / gastoTotal) * 100 : 0
+
+        // Debug
+        console.log('Cálculos Dashboard:', {
+          gastoTotal,
+          ganhoRastreado,
+          faturamentoTikTok,
+          lucroRastreado,
+          roiRastreado,
+          lucroReal,
+          roiReal,
+        })
+
+        return (
+          <SummaryCards
+            totalGasto={gastoTotal}
+            totalGanho={ganhoRastreado}
+            totalLucro={lucroRastreado}
+            roiGeral={roiRastreado}
+            faturamentoTiktok={faturamentoTikTok}
+            lucroReal={lucroReal}
+            roiReal={roiReal}
+          />
+        )
+      })()}
 
       <Card>
         <CardHeader>

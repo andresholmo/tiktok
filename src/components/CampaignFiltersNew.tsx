@@ -53,7 +53,7 @@ export function CampaignFiltersNew({
           placeholder="Buscar campanha..."
           value={filters.search}
           onChange={(e) => updateFilter('search', e.target.value)}
-          className="pl-10"
+          className="pl-10 bg-white"
         />
       </div>
       
@@ -63,10 +63,10 @@ export function CampaignFiltersNew({
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Status</label>
           <Select value={filters.status} onValueChange={(v) => updateFilter('status', v)}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="Todos">Todos</SelectItem>
               {options.statuses.map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -79,10 +79,10 @@ export function CampaignFiltersNew({
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Criador</label>
           <Select value={filters.criador} onValueChange={(v) => updateFilter('criador', v)}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="Todos">Todos</SelectItem>
               {options.criadores.map(c => (
                 <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -95,10 +95,10 @@ export function CampaignFiltersNew({
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Nicho</label>
           <Select value={filters.nicho} onValueChange={(v) => updateFilter('nicho', v)}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="Todos">Todos</SelectItem>
               {options.nichos.map(n => (
                 <SelectItem key={n} value={n}>{n}</SelectItem>
@@ -111,10 +111,10 @@ export function CampaignFiltersNew({
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">ROI</label>
           <Select value={filters.roi} onValueChange={(v) => updateFilter('roi', v)}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border shadow-lg z-50">
               <SelectItem value="Todos">Todos</SelectItem>
               <SelectItem value="Positivo">Positivo</SelectItem>
               <SelectItem value="Negativo">Negativo</SelectItem>

@@ -53,7 +53,9 @@ export default function DashboardPage() {
         .eq('import_id', importData.id)
 
       if (!campaignsError && campaignsData) {
-        setCampaigns(campaignsData)
+        // Filtrar campanhas SEM DADOS
+        const campanhasValidas = campaignsData.filter(c => c.status !== 'SEM DADOS')
+        setCampaigns(campanhasValidas)
       }
     } catch (error) {
       console.error('Erro ao buscar dados:', error)

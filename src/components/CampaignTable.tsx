@@ -80,7 +80,8 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
 
   // Filtrar e ordenar campanhas
   const filteredCampaigns = useMemo(() => {
-    let filtered = [...campaigns]
+    // Sempre ocultar campanhas SEM DADOS
+    let filtered = campaigns.filter(c => c.status !== 'SEM DADOS')
 
     // Busca por nome
     if (search) {
@@ -184,7 +185,7 @@ export function CampaignTable({ campaigns }: CampaignTableProps) {
       />
 
       <div className="text-sm text-muted-foreground">
-        Exibindo {filteredCampaigns.length} de {campaigns.length} campanhas
+        Exibindo {filteredCampaigns.length} de {campaigns.filter(c => c.status !== 'SEM DADOS').length} campanhas
       </div>
 
       <div className="rounded-md border overflow-x-auto">

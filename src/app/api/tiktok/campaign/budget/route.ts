@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
               advertiser_id: credentials.advertiser_id,
               campaign_id: campaignId,
               budget: budgetInCents,
-              budget_mode: 'BUDGET_MODE_DAY',  // Orçamento diário
+              // NÃO incluir budget_mode - não pode ser alterado em campanhas existentes
             }),
           }
         )
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
         const data = await response.json()
 
         if (data.code !== 0) {
+          console.error(`Erro campanha ${campaignId}:`, data.message)
           errors.push({ campaignId, error: data.message })
         } else {
           results.push(campaignId)
@@ -80,6 +81,15 @@ export async function POST(request: NextRequest) {
     console.log(`Orçamento atualizado para R$ ${budget}:`, results)
     if (errors.length > 0) {
       console.error('Erros:', errors)
+    }
+
+    // Se todas falharam, retornar erro
+    if (results.length === 0 && errors.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: errors[0].error,
+        errors,
+      }, { status: 400 })
     }
 
     return NextResponse.json({

@@ -23,6 +23,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 interface CampaignTableProps {
   campaigns: Campaign[]
+  onRefresh?: () => void
 }
 
 type SortField = 'status' | 'campanha' | 'roi' | 'gasto' | 'ganho' | 'lucro_prejuizo' | 'cpc' | 'ctr' | 'ecpm' | 'orcamento_diario'

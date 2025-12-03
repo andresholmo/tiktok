@@ -40,7 +40,7 @@ export interface Campaign {
   id: string
   import_id: string
   campanha: string
-  status: 'ATIVO' | 'PAUSADO' | 'SEM DADOS'
+  status: 'ATIVO' | 'PAUSADO' | 'SEM DADOS' | 'ENABLE' | 'DISABLE' | string
   
   // Campos antigos (manter para compatibilidade)
   gasto?: number

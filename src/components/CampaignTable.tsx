@@ -9,8 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
+import { BulkActions } from './BulkActions'
 import { Campaign } from '@/types'
-import { formatCurrency, formatPercentSafe } from '@/lib/utils'
+import { formatCurrencyBRL, formatPercentSafe } from '@/lib/utils'
 import {
   getROIColor,
   getCPCColor,

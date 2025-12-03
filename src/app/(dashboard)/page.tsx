@@ -333,10 +333,7 @@ export default function DashboardPage() {
           />
 
           {/* Tabela - recebe campanhas já filtradas */}
-          <CampaignTable 
-            campaigns={filteredCampaigns} 
-            showFilters={false}
-          />
+          <CampaignTable campaigns={filteredCampaigns} />
         </>
       ) : (
         <Card>

@@ -1,8 +1,8 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrendingUp, TrendingDown, DollarSign, Target, Zap, PiggyBank } from 'lucide-react'
-import { formatCurrency, formatPercent } from '@/lib/utils'
+import { TrendingUp, TrendingDown, DollarSign, Target, Zap } from 'lucide-react'
+import { formatCurrencyBRL, formatPercentSafe } from '@/lib/utils'
 
 interface SummaryCardsProps {
   totalGasto: number
@@ -37,7 +37,65 @@ export function SummaryCards({
 
   return (
     <div className="space-y-4">
-      {/* Cards principais */}
+      {/* LINHA 1 - Real (totais gerais - fixos) */}
+      {(faturamentoTiktok !== undefined && faturamentoTiktok > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-800">Faturamento TikTok</CardTitle>
+              <Zap className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-700">
+                {formatCurrencyBRL(faturamentoTiktok)}
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                Total no GAM (inclui não rastreado)
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className={lucroRealCalc >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${lucroRealCalc >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                Lucro Real
+              </CardTitle>
+              {lucroRealCalc >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-600" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${lucroRealCalc >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                {formatCurrencyBRL(lucroRealCalc)}
+              </div>
+              <p className={`text-xs mt-1 ${lucroRealCalc >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                Faturamento - Gasto Total
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className={roiRealCalc >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${roiRealCalc >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                ROI Real
+              </CardTitle>
+              <Target className={`h-4 w-4 ${roiRealCalc >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${roiRealCalc >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                {formatPercentSafe(roiRealCalc)}
+              </div>
+              <p className={`text-xs mt-1 ${roiRealCalc >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                (Faturamento - Gasto) / Gasto
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* LINHA 2 - Rastreado (filtráveis) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -46,7 +104,7 @@ export function SummaryCards({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalGasto)}
+              {formatCurrencyBRL(totalGasto)}
             </div>
           </CardContent>
         </Card>
@@ -58,7 +116,7 @@ export function SummaryCards({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalGanho)}
+              {formatCurrencyBRL(totalGanho)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Soma das campanhas com UTM
@@ -77,7 +135,7 @@ export function SummaryCards({
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${lucroRastreado >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(lucroRastreado)}
+              {formatCurrencyBRL(lucroRastreado)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Ganho Rastreado - Gasto
@@ -88,11 +146,11 @@ export function SummaryCards({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ROI Rastreado</CardTitle>
-            <Target className="h-4 w-4 text-blue-500" />
+            <Target className={`h-4 w-4 ${roiRastreado >= 0 ? 'text-green-500' : 'text-red-500'}`} />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${roiRastreado >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatPercent(roiRastreado)}
+              {formatPercentSafe(roiRastreado)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Baseado no Ganho Rastreado
@@ -100,60 +158,6 @@ export function SummaryCards({
           </CardContent>
         </Card>
       </div>
-
-      {/* Cards de ROI Real */}
-      {faturamentoTiktok !== undefined && faturamentoTiktok > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-800">Faturamento TikTok</CardTitle>
-              <Zap className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-700">
-                {formatCurrency(faturamentoTiktok)}
-              </div>
-              <p className="text-xs text-blue-600 mt-1">
-                Total no GAM (inclui não rastreado)
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className={lucroRealCalc >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className={`text-sm font-medium ${lucroRealCalc >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-                Lucro Real
-              </CardTitle>
-              <PiggyBank className={`h-4 w-4 ${lucroRealCalc >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${lucroRealCalc >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                {formatCurrency(lucroRealCalc)}
-              </div>
-              <p className={`text-xs mt-1 ${lucroRealCalc >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                Faturamento - Gasto Total
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className={roiRealCalc >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className={`text-sm font-medium ${roiRealCalc >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-                ROI Real
-              </CardTitle>
-              <Target className={`h-4 w-4 ${roiRealCalc >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${roiRealCalc >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                {formatPercent(roiRealCalc)}
-              </div>
-              <p className={`text-xs mt-1 ${roiRealCalc >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                (Faturamento - Gasto) / Gasto
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   )
 }

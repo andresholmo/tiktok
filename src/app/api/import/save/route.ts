@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
       // Criar nova importação
       const insertData: any = {
         date: startDate, // Manter compatibilidade
-        user_id: user.id,
+        user_id: finalUserId,
         roi_geral: roiRastreado, // ROI Rastreado
         roi_real: roiReal, // ROI Real
         profit: profitRastreado, // Lucro Rastreado

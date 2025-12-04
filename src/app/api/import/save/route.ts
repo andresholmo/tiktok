@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase
         .from('imports')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', finalUserId)
         .eq('start_date', startDate)
         .eq('end_date', endDate)
         .maybeSingle()
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
         const { data: fallbackData } = await supabase
           .from('imports')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('user_id', finalUserId)
           .eq('date', startDate)
           .maybeSingle()
         existingImport = fallbackData

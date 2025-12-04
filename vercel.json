@@ -1,0 +1,17 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync",
+      "schedule": "1 * * * *"
+    },
+    {
+      "path": "/api/cron/sync",
+      "schedule": "41 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-yesterday",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}
+

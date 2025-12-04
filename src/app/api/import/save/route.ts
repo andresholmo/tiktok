@@ -48,13 +48,20 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     
+    // Obter userId da sessão OU do header (para cron)
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const userIdFromHeader = request.headers.get('x-user-id')
+    const userId = user?.id || userIdFromHeader
+    
+    if (!userId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     const data: SaveImportRequest = await request.json()
     const { startDate, endDate, tiktok, gam } = data
+    
+    // Usar userId do body se fornecido (para cron), senão usar da sessão
+    const finalUserId = data.userId || userId
 
     // Calcular ROI geral
     const totalSpend = tiktok.totalSpend || 0
@@ -330,7 +337,7 @@ export async function POST(request: NextRequest) {
             .from('imports')
             .insert({
               date: startDate,
-              user_id: user.id,
+              user_id: finalUserId,
               roi_geral: roiRastreado,
               roi_real: roiReal,
               profit: profitRastreado,

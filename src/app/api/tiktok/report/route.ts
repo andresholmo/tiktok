@@ -6,16 +6,20 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
+    
+    // Obter userId da sessão OU do header (para cron)
     const { data: { user } } = await supabase.auth.getUser()
+    const userIdFromHeader = request.headers.get('x-user-id')
+    const userId = user?.id || userIdFromHeader
 
-    if (!user) {
+    if (!userId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     const { data: credentials, error: credError } = await supabase
       .from('tiktok_credentials')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (credError || !credentials) {

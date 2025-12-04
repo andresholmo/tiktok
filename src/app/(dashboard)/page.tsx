@@ -98,6 +98,13 @@ export default function DashboardPage() {
   const filteredCampaigns = useMemo(() => {
     if (!data?.campaigns) return []
     
+    // DEBUG: Verificar se is_smart_plus está chegando
+    console.log('=== DEBUG: Campanhas filtradas (primeiras 3) ===')
+    console.log(data.campaigns.slice(0, 3).map((c: Campaign) => ({ 
+      nome: c.campanha, 
+      is_smart_plus: c.is_smart_plus 
+    })))
+    
     return data.campaigns.filter((campaign: Campaign) => {
       // Filtro de busca (nome da campanha)
       if (filters.search && !campaign.campanha?.toLowerCase().includes(filters.search.toLowerCase())) {

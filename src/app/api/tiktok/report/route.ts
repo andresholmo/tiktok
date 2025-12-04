@@ -97,6 +97,12 @@ export async function POST(request: NextRequest) {
       // Continuar mesmo sem dados de campanha
     }
 
+    // ========== DEBUG: Primeira campanha raw ==========
+    console.log('=== DEBUG: Primeira campanha raw ===')
+    if (campaignData?.data?.list?.[0]) {
+      console.log(JSON.stringify(campaignData.data.list[0], null, 2))
+    }
+
     // ========== 3. CRIAR MAPA DE CAMPANHAS (por campaign_id) ==========
     const campaignMap = new Map<string, any>()
     
@@ -112,6 +118,9 @@ export async function POST(request: NextRequest) {
         const isSmartPlus = camp.is_smart_performance_campaign === true ||
                            camp.objective_type === 'SMART_PERFORMANCE' ||
                            (camp.objective_type && camp.objective_type.includes('SMART'))
+        
+        // DEBUG: Log para cada campanha
+        console.log(`Campanha ${camp.campaign_name}: objective_type=${camp.objective_type}, is_smart_performance_campaign=${camp.is_smart_performance_campaign}, isSmartPlus=${isSmartPlus}`)
         
         campaignMap.set(camp.campaign_id, {
           budget: budget,

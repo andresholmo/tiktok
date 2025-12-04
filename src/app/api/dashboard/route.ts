@@ -60,8 +60,17 @@ export async function GET(request: NextRequest) {
     const importIds = imports.map(i => i.id)
     const { data: campaigns, error: campaignsError } = await supabase
       .from('campaigns')
-      .select('*')
+      .select('*, is_smart_plus')
       .in('import_id', importIds)
+    
+    // DEBUG: Verificar se is_smart_plus está vindo do banco
+    console.log('=== DEBUG: Campanhas do banco (primeiras 3) ===')
+    if (campaigns && campaigns.length > 0) {
+      console.log(campaigns.slice(0, 3).map(c => ({ 
+        nome: c.campaign_name || c.campanha, 
+        is_smart_plus: c.is_smart_plus 
+      })))
+    }
 
     if (campaignsError) {
       console.error('Erro ao buscar campanhas:', campaignsError)
@@ -114,10 +123,15 @@ export async function GET(request: NextRequest) {
         existing.tiktok_clicks = (existing.tiktok_clicks || 0) + (Number(camp.tiktok_clicks ?? 0) || 0)
         existing.gam_impressions = (existing.gam_impressions || 0) + (Number(camp.gam_impressions ?? 0) || 0)
         existing.gam_clicks = (existing.gam_clicks || 0) + (Number(camp.gam_clicks ?? 0) || 0)
+        // Preservar is_smart_plus (usar o primeiro valor encontrado)
+        if (!existing.is_smart_plus && camp.is_smart_plus) {
+          existing.is_smart_plus = camp.is_smart_plus
+        }
       } else {
         campaignMap.set(name, { 
           ...camp,
           campanha: name, // Garantir compatibilidade
+          is_smart_plus: Boolean(camp.is_smart_plus), // Garantir que existe
         })
       }
     }
@@ -156,11 +170,25 @@ export async function GET(request: NextRequest) {
         cpc,
         ecpm,
         status: camp.tiktok_status || camp.status || (gasto > 0 ? 'ATIVO' : 'SEM DADOS'),
+        is_smart_plus: Boolean(camp.is_smart_plus), // Garantir que existe
       }
     })
 
     // Filtrar campanhas SEM DADOS
-    const validCampaigns = aggregatedCampaigns.filter(c => c.status !== 'SEM DADOS')
+    const validCampaigns = aggregatedCampaigns
+      .filter(c => c.status !== 'SEM DADOS')
+      .map(c => ({
+        ...c,
+        campanha: c.campaign_name || c.campanha,
+        is_smart_plus: Boolean(c.is_smart_plus), // Forçar campo
+      }))
+    
+    // DEBUG: Verificar campanhas finais
+    console.log('=== DEBUG: Campanhas filtradas (primeiras 3) ===')
+    console.log(validCampaigns.slice(0, 3).map(c => ({ 
+      nome: c.campanha, 
+      is_smart_plus: c.is_smart_plus 
+    })))
 
     return NextResponse.json({
       success: true,

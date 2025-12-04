@@ -29,6 +29,7 @@ interface GAMCampaign {
 interface SaveImportRequest {
   startDate: string
   endDate: string
+  userId?: string  // Opcional para cron jobs
   tiktok: {
     campaigns: TikTokCampaign[]
     totalSpend: number

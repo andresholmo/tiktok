@@ -207,14 +207,20 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-1">
-                        {campaign.is_smart_plus && (
-                          <span 
-                            className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full" 
-                            title="Smart Plus - Não editável via API"
-                          >
-                            +
-                          </span>
-                        )}
+                        {(() => {
+                          // DEBUG: Log temporário
+                          if (campaign.is_smart_plus) {
+                            console.log('Renderizando Smart Plus:', campaign.campanha, 'is_smart_plus:', campaign.is_smart_plus)
+                          }
+                          return campaign.is_smart_plus ? (
+                            <span 
+                              className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full" 
+                              title="Smart Plus - Não editável via API"
+                            >
+                              +
+                            </span>
+                          ) : null
+                        })()}
                         <span>{campaign.campanha}</span>
                       </div>
                     </TableCell>

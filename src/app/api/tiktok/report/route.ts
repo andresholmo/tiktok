@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
         orcamentoDiario = campaignInfo.budget / dias
       }
 
-      return {
+      const resultCampaign = {
         campaign_id: campaignId,
         campanha: metrics.campaign_name || campaignInfo.campaign_name || 'Sem nome',
         gasto: parseFloat(metrics.spend) || 0,
@@ -180,6 +180,13 @@ export async function POST(request: NextRequest) {
         status: status,
         is_smart_plus: campaignInfo.is_smart_plus || false,
       }
+      
+      // DEBUG: Log campanha final
+      if (resultCampaign.is_smart_plus) {
+        console.log(`✅ Smart Plus detectado: ${resultCampaign.campanha}, is_smart_plus=${resultCampaign.is_smart_plus}`)
+      }
+      
+      return resultCampaign
     })
 
     // Filtrar campanhas com gasto > 0

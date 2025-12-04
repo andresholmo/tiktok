@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { startDate, endDate } = body
+    const { startDate, endDate, userId: bodyUserId } = body
+    
+    // Usar userId do body se fornecido (para cron), senão usar da sessão
+    const finalUserId = bodyUserId || userId
 
     if (!startDate || !endDate) {
       return NextResponse.json({ error: 'Datas obrigatórias' }, { status: 400 })

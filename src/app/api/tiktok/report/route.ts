@@ -200,8 +200,12 @@ export async function POST(request: NextRequest) {
       }
       
       // DEBUG: Log campanha final
+      console.log(`📊 Campanha final: ${resultCampaign.campanha}`)
+      console.log(`  - campaign_id: ${campaignId}`)
+      console.log(`  - is_smart_plus do campaignInfo: ${campaignInfo.is_smart_plus}`)
+      console.log(`  - is_smart_plus final: ${resultCampaign.is_smart_plus}`)
       if (resultCampaign.is_smart_plus) {
-        console.log(`✅ Smart Plus detectado: ${resultCampaign.campanha}, is_smart_plus=${resultCampaign.is_smart_plus}`)
+        console.log(`✅ Smart Plus detectado: ${resultCampaign.campanha}`)
       }
       
       return resultCampaign

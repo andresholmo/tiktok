@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         campaignMap.set(camp.campaign_id, {
           budget: budget,
           budget_mode: budgetMode,
-          status: camp.operation_status || camp.status || 'UNKNOWN',
+          status: camp.operation_status || 'UNKNOWN',
           campaign_name: camp.campaign_name,
           is_smart_plus: isSmartPlus,
         })

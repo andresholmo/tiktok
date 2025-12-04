@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // ========== 2. BUSCAR CAMPANHAS (orçamento, status, tipo) ==========
     const campaignParams = new URLSearchParams({
       advertiser_id: advertiserId,
-      fields: JSON.stringify(['campaign_id', 'campaign_name', 'budget', 'budget_mode', 'operation_status', 'status', 'objective_type', 'is_smart_performance_campaign']),
+      fields: JSON.stringify(['campaign_id', 'campaign_name', 'budget', 'budget_mode', 'operation_status', 'objective_type', 'is_smart_performance_campaign']),
       page_size: '1000',
     })
     const campaignUrl = `https://business-api.tiktok.com/open_api/v1.3/campaign/get/?${campaignParams.toString()}`

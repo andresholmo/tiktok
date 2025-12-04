@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // ========== 2. BUSCAR CAMPANHAS (orçamento, status, tipo) ==========
     const campaignParams = new URLSearchParams({
       advertiser_id: advertiserId,
-      fields: JSON.stringify(['campaign_id', 'campaign_name', 'budget', 'budget_mode', 'operation_status', 'objective_type', 'is_smart_performance_campaign']),
+      fields: JSON.stringify(['campaign_id', 'campaign_name', 'budget', 'budget_mode', 'operation_status', 'objective_type', 'is_smart_performance_campaign', 'campaign_type']),
       page_size: '1000',
     })
     const campaignUrl = `https://business-api.tiktok.com/open_api/v1.3/campaign/get/?${campaignParams.toString()}`
@@ -97,10 +97,20 @@ export async function POST(request: NextRequest) {
       // Continuar mesmo sem dados de campanha
     }
 
-    // ========== DEBUG: Primeira campanha raw ==========
-    console.log('=== DEBUG: Primeira campanha raw ===')
-    if (campaignData?.data?.list?.[0]) {
-      console.log(JSON.stringify(campaignData.data.list[0], null, 2))
+    // ========== DEBUG SMART PLUS: Resposta da API de campanhas ==========
+    console.log('=== DEBUG SMART PLUS: Resposta da API de campanhas ===')
+    console.log('Total de campanhas:', campaignData?.data?.list?.length || 0)
+    
+    // Log detalhado de cada campanha
+    if (campaignData?.data?.list) {
+      campaignData.data.list.forEach((camp: any) => {
+        console.log(`Campanha: ${camp.campaign_name}`)
+        console.log(`  - campaign_id: ${camp.campaign_id}`)
+        console.log(`  - objective_type: ${camp.objective_type}`)
+        console.log(`  - is_smart_performance_campaign: ${camp.is_smart_performance_campaign} (tipo: ${typeof camp.is_smart_performance_campaign})`)
+        console.log(`  - campaign_type: ${camp.campaign_type}`)
+        console.log(`  - Todos os campos:`, Object.keys(camp).join(', '))
+      })
     }
 
     // ========== 3. CRIAR MAPA DE CAMPANHAS (por campaign_id) ==========
@@ -114,13 +124,21 @@ export async function POST(request: NextRequest) {
         const budgetMode = camp.budget_mode || camp.budget_type || 'BUDGET_MODE_DAY'
         const budget = parseFloat(camp.budget || camp.daily_budget || '0') || 0
         
-        // Identificar Smart Plus
-        const isSmartPlus = camp.is_smart_performance_campaign === true ||
-                           camp.objective_type === 'SMART_PERFORMANCE' ||
-                           (camp.objective_type && camp.objective_type.includes('SMART'))
+        // Identificar Smart Plus com lógica robusta
+        const isSmartPlus = 
+          camp.is_smart_performance_campaign === true ||
+          camp.is_smart_performance_campaign === 'true' ||
+          camp.is_smart_performance_campaign === 1 ||
+          camp.objective_type === 'SMART_PERFORMANCE' ||
+          camp.objective_type === 'PRODUCT_SALES' ||
+          (camp.campaign_type && String(camp.campaign_type).toUpperCase().includes('SMART')) ||
+          (camp.objective_type && String(camp.objective_type).toUpperCase().includes('SMART'))
         
         // DEBUG: Log para cada campanha
-        console.log(`Campanha ${camp.campaign_name}: objective_type=${camp.objective_type}, is_smart_performance_campaign=${camp.is_smart_performance_campaign}, isSmartPlus=${isSmartPlus}`)
+        console.log(`${camp.campaign_name} -> isSmartPlus: ${isSmartPlus}`)
+        console.log(`  - is_smart_performance_campaign: ${camp.is_smart_performance_campaign} (${typeof camp.is_smart_performance_campaign})`)
+        console.log(`  - objective_type: ${camp.objective_type}`)
+        console.log(`  - campaign_type: ${camp.campaign_type}`)
         
         campaignMap.set(camp.campaign_id, {
           budget: budget,

@@ -82,6 +82,13 @@ export async function POST(request: NextRequest) {
     // Preparar dados das campanhas cruzando TikTok com GAM
     const campaignDataList: any[] = []
 
+    // ========== DEBUG: Campanhas TikTok recebidas para salvar ==========
+    console.log('=== DEBUG: Campanhas TikTok recebidas para salvar ===')
+    console.log(`Total de campanhas: ${tiktok.campaigns.length}`)
+    tiktok.campaigns.slice(0, 5).forEach((c: any) => {
+      console.log(`${c.campanha || c.campaign_name}: is_smart_plus=${c.is_smart_plus} (tipo: ${typeof c.is_smart_plus})`)
+    })
+
     // Processar campanhas do TikTok
     for (const tiktokCampaign of tiktok.campaigns) {
       const normalizedName = tiktokCampaign.campanha.trim().toUpperCase()
@@ -92,6 +99,13 @@ export async function POST(request: NextRequest) {
       const campaignProfit = gamRevenue - tiktokSpend
       const campaignRoi = tiktokSpend > 0 ? ((gamRevenue - tiktokSpend) / tiktokSpend) * 100 : null
 
+      const isSmartPlusValue = Boolean(tiktokCampaign.is_smart_plus)
+      
+      // DEBUG: Log antes de salvar
+      if (isSmartPlusValue) {
+        console.log(`💾 Salvando Smart Plus: ${tiktokCampaign.campanha}, is_smart_plus=${isSmartPlusValue}`)
+      }
+      
       campaignDataList.push({
         campaign_name: tiktokCampaign.campanha,
         campanha: tiktokCampaign.campanha, // Manter compatibilidade
@@ -118,7 +132,7 @@ export async function POST(request: NextRequest) {
         ctr: tiktokCampaign.ctr || 0,
         ecpm: gamCampaign?.ecpm || 0,
         orcamento_diario: tiktokCampaign.orcamento_diario || 0,
-        is_smart_plus: tiktokCampaign.is_smart_plus || false,
+        is_smart_plus: isSmartPlusValue,
       })
 
       // Remover do mapa para identificar campanhas GAM sem correspondência

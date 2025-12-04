@@ -13,6 +13,7 @@ interface TikTokCampaign {
   cpc: number
   status?: string
   orcamento_diario?: number
+  is_smart_plus?: boolean
 }
 
 interface GAMCampaign {

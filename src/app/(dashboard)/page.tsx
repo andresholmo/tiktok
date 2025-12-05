@@ -307,9 +307,12 @@ export default function DashboardPage() {
         throw new Error(saveResult.error || 'Erro ao salvar')
       }
 
-      toast.success(`Sincronizado! ROI: ${(saveResult.summary?.roiTracked ?? 0).toFixed(2)}%`)
+      toast.success(`Sincronizado! ROI: ${(saveResult.summary?.roiRastreado ?? saveResult.summary?.roiTracked ?? 0).toFixed(2)}%`)
       
-      // Recarregar dados
+      // Atualizar horário imediatamente (sem esperar fetch)
+      setLastSyncAt(new Date().toISOString())
+      
+      // Recarregar dados do dashboard
       await fetchData(startDate, endDate)
 
     } catch (err: any) {

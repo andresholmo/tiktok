@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [syncing, setSyncing] = useState(false)
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   
   // Estado dos filtros
   const [filters, setFilters] = useState<Filters>({
@@ -84,8 +85,48 @@ export default function DashboardPage() {
     }
   }
 
+  // Função para buscar status da sincronização
+  const fetchSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/sync/status')
+      const data = await response.json()
+      if (data.success && data.lastSyncAt) {
+        setLastSyncAt(data.lastSyncAt)
+      }
+    } catch (err) {
+      console.error('Erro ao buscar sync status:', err)
+    }
+  }
+
+  // Função para formatar data e hora completa
+  const formatSyncDateTime = (isoDate: string) => {
+    const date = new Date(isoDate)
+    const hoje = new Date()
+    const ontem = new Date(hoje)
+    ontem.setDate(ontem.getDate() - 1)
+    
+    const syncDate = date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    const hojeStr = hoje.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    const ontemStr = ontem.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    
+    const hora = date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo',
+    })
+    
+    if (syncDate === hojeStr) {
+      return `Sincronizado às ${hora}`
+    } else if (syncDate === ontemStr) {
+      return `Sincronizado ontem às ${hora}`
+    } else {
+      return `Sincronizado em ${syncDate} às ${hora}`
+    }
+  }
+
   useEffect(() => {
     fetchData(startDate, endDate)
+    fetchSyncStatus()
   }, [])
 
   const handleDateChange = (start: string, end: string) => {
@@ -286,6 +327,13 @@ export default function DashboardPage() {
         
         <div className="flex items-center gap-4 flex-wrap">
           <DateFilter onDateChange={handleDateChange} isLoading={loading} />
+          
+          {/* Texto de última sincronização */}
+          {lastSyncAt && (
+            <span className="text-sm text-muted-foreground">
+              {formatSyncDateTime(lastSyncAt)}
+            </span>
+          )}
           
           <Button onClick={handleSync} disabled={syncing || loading} variant="default">
             {syncing ? (

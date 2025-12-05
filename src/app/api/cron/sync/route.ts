@@ -150,6 +150,7 @@ async function syncUserData(
     headers: { 
       'Content-Type': 'application/json',
       'x-user-id': userId,
+      'x-sync-type': 'cron',
     },
     body: JSON.stringify({
       startDate,

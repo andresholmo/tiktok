@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getTodayBR } from '@/lib/date-utils'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 export const maxDuration = 300 // 5 minutos máximo
 
 // Verificar token de autorização
@@ -19,14 +20,30 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 export async function GET(request: NextRequest) {
-  console.log('=== CRON: Iniciando sincronização automática ===')
+  console.log('=== CRON SYNC: Iniciando ===')
   console.log('Horário:', new Date().toISOString())
+  console.log('URL:', request.url)
+  console.log('Method:', request.method)
   
-  // Verificar autorização
-  if (!isAuthorized(request)) {
-    console.error('CRON: Não autorizado')
+  // Verificar autorização do Vercel Cron
+  const authHeader = request.headers.get('authorization')
+  const cronSecret = process.env.CRON_SECRET
+  
+  console.log('Auth header presente:', !!authHeader)
+  console.log('Cron secret configurado:', !!cronSecret)
+  
+  if (!cronSecret) {
+    console.error('CRON_SECRET não configurado')
+    return NextResponse.json({ error: 'CRON_SECRET não configurado' }, { status: 500 })
+  }
+  
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    console.error('Não autorizado - header inválido')
+    console.error('Header recebido:', authHeader ? 'presente' : 'ausente')
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
+  
+  console.log('=== CRON SYNC: Autorizado, executando... ===')
 
   try {
     const supabase = await createClient()

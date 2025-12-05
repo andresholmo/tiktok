@@ -21,7 +21,8 @@ import {
   getLucroColor,
   getStatusColor,
 } from '@/lib/calculations'
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface CampaignTableProps {
   campaigns: Campaign[]
@@ -105,6 +106,17 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
     }
   }
 
+  // Função para copiar texto
+  const copyToClipboard = async (text: string, message?: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(message || 'Copiado!')
+    } catch (err) {
+      toast.error('Erro ao copiar')
+      console.error('Erro ao copiar:', err)
+    }
+  }
+
   // Componente do ícone de ordenação
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) {
@@ -141,7 +153,8 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
           )}
         </div>
         <BulkActions 
-          selectedCampaigns={selectedIds} 
+          selectedCampaigns={selectedIds}
+          campaigns={campaigns}
           onActionComplete={handleActionComplete}
         />
       </div>

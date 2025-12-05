@@ -389,6 +389,32 @@ export async function POST(request: NextRequest) {
       roiReal: roiReal,
     })
 
+    // Registrar horário da sincronização
+    const syncType = request.headers.get('x-sync-type') || 'manual'
+    
+    try {
+      await supabase
+        .from('sync_status')
+        .upsert({
+          user_id: finalUserId,
+          last_sync_at: new Date().toISOString(),
+          sync_type: syncType,
+          status: 'success',
+          details: {
+            tiktokCampaigns: campaignDataList.length,
+            gamRevenue: gamRevenue,
+            roi: roiRastreado,
+          },
+        }, {
+          onConflict: 'user_id',
+        })
+      
+      console.log('Sync status atualizado')
+    } catch (syncError) {
+      // Não falhar a requisição se o sync_status falhar
+      console.error('Erro ao atualizar sync status:', syncError)
+    }
+
     return NextResponse.json({
       success: true,
       import: importRecord,

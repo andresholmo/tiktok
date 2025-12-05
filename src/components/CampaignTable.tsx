@@ -33,7 +33,7 @@ type SortOrder = 'asc' | 'desc'
 
 export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   const [sortField, setSortField] = useState<SortField>('roi')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc') // ROI decrescente por padrão
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // Selecionar/deselecionar todas
@@ -71,12 +71,17 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   const sortedCampaigns = useMemo(() => {
     const sorted = [...campaigns]
     sorted.sort((a, b) => {
-      let aValue: any = a[sortField]
-      let bValue: any = b[sortField]
+      let aValue: any = a[sortField] ?? 0
+      let bValue: any = b[sortField] ?? 0
 
-      if (typeof aValue === 'string') {
+      // Converter para número se necessário (para campos numéricos)
+      const numericFields: SortField[] = ['roi', 'gasto', 'ganho', 'lucro_prejuizo', 'cpc', 'ctr', 'ecpm', 'orcamento_diario']
+      if (numericFields.includes(sortField)) {
+        aValue = parseFloat(aValue) || 0
+        bValue = parseFloat(bValue) || 0
+      } else if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase()
-        bValue = bValue.toLowerCase()
+        bValue = typeof bValue === 'string' ? bValue.toLowerCase() : String(bValue).toLowerCase()
       }
 
       if (sortOrder === 'asc') {
@@ -91,10 +96,12 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   // Função para alternar ordenação
   const handleSort = (field: SortField) => {
     if (sortField === field) {
+      // Se já está ordenando por esta coluna, inverte a direção
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     } else {
+      // Nova coluna, começa decrescente (maior no topo)
       setSortField(field)
-      setSortOrder('asc')
+      setSortOrder('desc')
     }
   }
 

@@ -226,7 +226,7 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 group">
                         {(() => {
                           // DEBUG: Log temporário
                           if (campaign.is_smart_plus) {
@@ -241,7 +241,14 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                             </span>
                           ) : null
                         })()}
-                        <span>{campaign.campanha}</span>
+                        <span 
+                          className="cursor-pointer hover:text-primary hover:underline flex items-center gap-1"
+                          onClick={() => copyToClipboard(campaign.campanha, `"${campaign.campanha}" copiado!`)}
+                          title="Clique para copiar"
+                        >
+                          {campaign.campanha}
+                          <Copy className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className={`text-center ${getROIColor(campaign.roi ?? 0)}`}>

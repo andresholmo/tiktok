@@ -414,9 +414,6 @@ export async function POST(request: NextRequest) {
       // Não falhar a requisição se o sync_status falhar
       console.error('Erro ao atualizar sync status:', syncError)
     }
-
-    // Registrar horário da sincronização
-    const syncType = request.headers.get('x-sync-type') || 'manual'
     
     try {
       await supabase

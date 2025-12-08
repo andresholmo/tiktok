@@ -33,7 +33,7 @@ type SortOrder = 'asc' | 'desc'
 
 export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   const [sortField, setSortField] = useState<SortField>('roi')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // Selecionar/deselecionar todas
@@ -69,23 +69,75 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
 
   // Ordenar campanhas
   const sortedCampaigns = useMemo(() => {
-    const sorted = [...campaigns]
-    sorted.sort((a, b) => {
-      let aValue: any = a[sortField]
-      let bValue: any = b[sortField]
+    if (!campaigns || campaigns.length === 0) return []
 
-      if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase()
-        bValue = bValue.toLowerCase()
+    return [...campaigns].sort((a, b) => {
+      let aValue: number = 0
+      let bValue: number = 0
+
+      // Mapear o nome da coluna para o campo correto
+      switch (sortField) {
+        case 'roi':
+          aValue = a.roi ?? 0
+          bValue = b.roi ?? 0
+          break
+        case 'gasto':
+          aValue = a.gasto ?? 0
+          bValue = b.gasto ?? 0
+          break
+        case 'ganho':
+          aValue = a.ganho ?? 0
+          bValue = b.ganho ?? 0
+          break
+        case 'lucro_prejuizo':
+          aValue = a.lucro_prejuizo ?? 0
+          bValue = b.lucro_prejuizo ?? 0
+          break
+        case 'cpc':
+          aValue = a.cpc ?? 0
+          bValue = b.cpc ?? 0
+          break
+        case 'ctr':
+          aValue = a.ctr ?? 0
+          bValue = b.ctr ?? 0
+          break
+        case 'ecpm':
+          aValue = a.ecpm ?? 0
+          bValue = b.ecpm ?? 0
+          break
+        case 'orcamento_diario':
+          aValue = a.orcamento_diario ?? 0
+          bValue = b.orcamento_diario ?? 0
+          break
+        case 'campanha':
+          // Ordenação alfabética
+          const nameA = a.campanha || ''
+          const nameB = b.campanha || ''
+          if (sortOrder === 'asc') {
+            return nameA.localeCompare(nameB)
+          } else {
+            return nameB.localeCompare(nameA)
+          }
+        case 'status':
+          const statusA = a.status || ''
+          const statusB = b.status || ''
+          if (sortOrder === 'asc') {
+            return statusA.localeCompare(statusB)
+          } else {
+            return statusB.localeCompare(statusA)
+          }
+        default:
+          aValue = a.roi ?? 0
+          bValue = b.roi ?? 0
       }
 
+      // Ordenação numérica
       if (sortOrder === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+        return aValue - bValue
       } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+        return bValue - aValue  // Decrescente: maior primeiro
       }
     })
-    return sorted
   }, [campaigns, sortField, sortOrder])
 
   // Função para alternar ordenação

@@ -21,7 +21,8 @@ import {
   getLucroColor,
   getStatusColor,
 } from '@/lib/calculations'
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface CampaignTableProps {
   campaigns: Campaign[]
@@ -65,6 +66,16 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   const handleActionComplete = () => {
     setSelectedIds([])
     if (onRefresh) onRefresh()
+  }
+
+  // Função para copiar texto para clipboard
+  const copyToClipboard = async (text: string, message?: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(message || 'Copiado!')
+    } catch (err) {
+      toast.error('Erro ao copiar')
+    }
   }
 
   // Ordenar campanhas
@@ -146,29 +157,21 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     } else {
       setSortField(field)
-      setSortOrder('asc')
+      setSortOrder('desc')
     }
-  }
-
-  // Componente do ícone de ordenação
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />
-    }
-    return sortOrder === 'asc' 
-      ? <ArrowUp className="h-4 w-4 ml-1" />
-      : <ArrowDown className="h-4 w-4 ml-1" />
   }
 
   // Cabeçalho clicável
-  const SortableHeader = ({ field, children }: { field: SortField, children: React.ReactNode }) => (
+  const SortableHeader = ({ field, children, className = '' }: { field: SortField, children: React.ReactNode, className?: string }) => (
     <TableHead 
-      className="text-white font-bold cursor-pointer hover:bg-blue-700 transition-colors select-none"
+      className={`text-white font-bold cursor-pointer hover:bg-blue-700 transition-colors select-none ${className}`}
       onClick={() => handleSort(field)}
     >
-      <div className="flex items-center text-white">
+      <div className="flex items-center gap-1 text-white">
         {children}
-        <SortIcon field={field} />
+        {sortField === field && (
+          <span className="text-xs">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+        )}
       </div>
     </TableHead>
   )
@@ -186,7 +189,8 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
           )}
         </div>
         <BulkActions 
-          selectedCampaigns={selectedIds} 
+          selectedCampaigns={selectedIds}
+          campaigns={campaigns}
           onActionComplete={handleActionComplete}
         />
       </div>
@@ -205,14 +209,14 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
               </TableHead>
               <SortableHeader field="status">STATUS</SortableHeader>
               <SortableHeader field="campanha">CAMPANHA</SortableHeader>
-              <SortableHeader field="roi">ROI</SortableHeader>
-              <SortableHeader field="gasto">GASTO</SortableHeader>
-              <SortableHeader field="ganho">GANHO</SortableHeader>
-              <SortableHeader field="lucro_prejuizo">LUCRO/PREJUÍZO</SortableHeader>
-              <SortableHeader field="cpc">CPC</SortableHeader>
-              <SortableHeader field="ctr">CTR</SortableHeader>
-              <SortableHeader field="ecpm">eCPM</SortableHeader>
-              <SortableHeader field="orcamento_diario">ORÇAM. DIÁRIO</SortableHeader>
+              <SortableHeader field="roi" className="text-right">ROI</SortableHeader>
+              <SortableHeader field="gasto" className="text-right">GASTO</SortableHeader>
+              <SortableHeader field="ganho" className="text-right">GANHO</SortableHeader>
+              <SortableHeader field="lucro_prejuizo" className="text-right">LUCRO/PREJUÍZO</SortableHeader>
+              <SortableHeader field="cpc" className="text-right">CPC</SortableHeader>
+              <SortableHeader field="ctr" className="text-right">CTR</SortableHeader>
+              <SortableHeader field="ecpm" className="text-right">eCPM</SortableHeader>
+              <SortableHeader field="orcamento_diario" className="text-right">ORÇAM. DIÁRIO</SortableHeader>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -258,22 +262,23 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">
-                      <div className="flex items-center gap-1">
-                        {(() => {
-                          // DEBUG: Log temporário
-                          if (campaign.is_smart_plus) {
-                            console.log('Renderizando Smart Plus:', campaign.campanha, 'is_smart_plus:', campaign.is_smart_plus)
-                          }
-                          return campaign.is_smart_plus ? (
-                            <span 
-                              className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-red-600 bg-red-100 rounded-full" 
-                              title="Smart Plus - Não editável via API"
-                            >
-                              +
-                            </span>
-                          ) : null
-                        })()}
-                        <span>{campaign.campanha}</span>
+                      <div className="flex items-center gap-1 group">
+                        {campaign.is_smart_plus && (
+                          <span 
+                            className="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-red-600 bg-red-100 rounded-full flex-shrink-0" 
+                            title="Smart Plus - Não editável via API"
+                          >
+                            +
+                          </span>
+                        )}
+                        <span 
+                          className="cursor-pointer hover:text-primary hover:underline flex items-center gap-1"
+                          onClick={() => copyToClipboard(campaign.campanha, `"${campaign.campanha}" copiado!`)}
+                          title="Clique para copiar"
+                        >
+                          {campaign.campanha}
+                          <Copy className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className={`text-center ${getROIColor(campaign.roi ?? 0)}`}>

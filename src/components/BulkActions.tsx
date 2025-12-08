@@ -18,16 +18,18 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ChevronDown, Play, Pause, DollarSign, Loader2 } from 'lucide-react'
+import { ChevronDown, Play, Pause, DollarSign, Loader2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
+import { Campaign } from '@/types'
 
 interface BulkActionsProps {
   selectedCampaigns: string[]
+  campaigns: Campaign[]
   onActionComplete: () => void
   disabled?: boolean
 }
 
-export function BulkActions({ selectedCampaigns, onActionComplete, disabled }: BulkActionsProps) {
+export function BulkActions({ selectedCampaigns, campaigns, onActionComplete, disabled }: BulkActionsProps) {
   const [loading, setLoading] = useState(false)
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false)
   const [newBudget, setNewBudget] = useState('')
@@ -61,6 +63,25 @@ export function BulkActions({ selectedCampaigns, onActionComplete, disabled }: B
       toast.error(error.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCopyNames = async () => {
+    if (selectedCampaigns.length === 0) {
+      toast.error('Selecione pelo menos uma campanha')
+      return
+    }
+
+    const selectedNames = campaigns
+      .filter(c => selectedCampaigns.includes(c.tiktok_campaign_id || ''))
+      .map(c => c.campanha)
+      .join('\n')
+
+    try {
+      await navigator.clipboard.writeText(selectedNames)
+      toast.success(`${selectedCampaigns.length} campanha(s) copiada(s)!`)
+    } catch (err) {
+      toast.error('Erro ao copiar')
     }
   }
 
@@ -125,6 +146,14 @@ export function BulkActions({ selectedCampaigns, onActionComplete, disabled }: B
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="bg-white border shadow-lg z-50">
+          {/* Copiar Nomes - NOVO */}
+          <DropdownMenuItem onClick={handleCopyNames} className="cursor-pointer">
+            <Copy className="h-4 w-4 mr-2 text-gray-600" />
+            Copiar Nomes
+          </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
+          
           <DropdownMenuItem 
             onClick={() => handleStatusChange('ENABLE')}
             className="cursor-pointer"

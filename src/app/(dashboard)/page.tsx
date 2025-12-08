@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { DateFilter } from '@/components/DateFilter'
 import { SummaryCards } from '@/components/SummaryCards'
 import { CampaignTable } from '@/components/CampaignTable'
@@ -63,6 +63,14 @@ export default function DashboardPage() {
     nicho: 'Todos',
     roi: 'Todos',
   })
+
+  // Estado para campanhas selecionadas
+  const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([])
+
+  // Callback para receber seleção da tabela
+  const handleSelectionChange = useCallback((ids: string[]) => {
+    setSelectedCampaignIds(ids)
+  }, [])
 
   // Buscar dados do período
   const fetchData = async (start: string, end: string) => {
@@ -191,28 +199,41 @@ export default function DashboardPage() {
     })
   }, [data?.campaigns, filters])
 
-  // Calcular totais das campanhas FILTRADAS (para linha 1 - Rastreado)
-  const filteredTotals = useMemo(() => {
-    const campaigns = filteredCampaigns
+  // Limpar seleção quando filtros mudarem
+  useEffect(() => {
+    setSelectedCampaignIds([])
+  }, [filters.search, filters.status, filters.criador, filters.nicho, filters.roi])
+
+  // Calcular totais - usa seleção se houver, senão usa todas filtradas
+  const displayTotals = useMemo(() => {
+    // Determinar quais campanhas usar para os cálculos
+    let campaignsToCalculate = filteredCampaigns
     
-    const totalGasto = campaigns.reduce((sum: number, c: Campaign) => sum + (c.gasto ?? 0), 0)
-    const totalGanho = campaigns.reduce((sum: number, c: Campaign) => sum + (c.ganho ?? 0), 0)
+    // Se há campanhas selecionadas, usar apenas essas
+    if (selectedCampaignIds.length > 0) {
+      campaignsToCalculate = filteredCampaigns.filter((c: Campaign) => 
+        selectedCampaignIds.includes(c.tiktok_campaign_id || '')
+      )
+    }
+    
+    const totalGasto = campaignsToCalculate.reduce((sum: number, c: Campaign) => sum + (c.gasto ?? 0), 0)
+    const totalGanho = campaignsToCalculate.reduce((sum: number, c: Campaign) => sum + (c.ganho ?? 0), 0)
     const totalLucro = totalGanho - totalGasto
     const roiGeral = totalGasto > 0 ? ((totalGanho - totalGasto) / totalGasto) * 100 : 0
-    
-    // NOVOS CÁLCULOS
-    const orcamentoDiario = campaigns.reduce((sum: number, c: Campaign) => sum + (c.orcamento_diario ?? 0), 0)
-    const orcamentoRemanescente = orcamentoDiario - totalGasto
+    const orcamentoDiario = campaignsToCalculate.reduce((sum: number, c: Campaign) => sum + (c.orcamento_diario ?? 0), 0)
+    const orcamentoRestante = orcamentoDiario - totalGasto
     
     return { 
       totalGasto, 
       totalGanho, 
       totalLucro, 
       roiGeral,
-      orcamentoDiario,      // Novo
-      orcamentoRemanescente // Novo
+      orcamentoDiario,
+      orcamentoRestante,
+      count: campaignsToCalculate.length,
+      isFiltered: selectedCampaignIds.length > 0
     }
-  }, [filteredCampaigns])
+  }, [filteredCampaigns, selectedCampaignIds])
 
   // Extrair opções únicas para os selects
   const filterOptions = useMemo(() => {
@@ -380,20 +401,22 @@ export default function DashboardPage() {
         <>
           {/* Cards - Linha 1 usa totais FILTRADOS, Linha 2 usa totais GERAIS */}
           <SummaryCards
-            // Linha 1 - Real (fixo)
+            // Linha 1 - Real (fixo - não muda com seleção)
             faturamentoTiktok={data.totals?.gamFaturamentoTotal ?? 0}
             lucroReal={data.totals?.lucroReal ?? 0}
             roiReal={data.totals?.roiReal ?? 0}
             
-            // Linha 2 - Rastreado (filtrado)
-            totalGasto={filteredTotals.totalGasto}
-            totalGanho={filteredTotals.totalGanho}
-            totalLucro={filteredTotals.totalLucro}
-            roiGeral={filteredTotals.roiGeral}
+            // Linha 2 e 3 - Dinâmicos (mudam com seleção)
+            totalGasto={displayTotals.totalGasto}
+            totalGanho={displayTotals.totalGanho}
+            totalLucro={displayTotals.totalLucro}
+            roiGeral={displayTotals.roiGeral}
+            orcamentoDiario={displayTotals.orcamentoDiario}
+            orcamentoRemanescente={displayTotals.orcamentoRestante}
             
-            // Linha 3 - Orçamento (novo)
-            orcamentoDiario={filteredTotals.orcamentoDiario}
-            orcamentoRemanescente={filteredTotals.orcamentoRemanescente}
+            // Info de seleção (opcional - para mostrar indicador)
+            selectedCount={displayTotals.count}
+            isSelection={displayTotals.isFiltered}
           />
 
           {/* Filtros da tabela */}
@@ -409,6 +432,7 @@ export default function DashboardPage() {
           <CampaignTable 
             campaigns={filteredCampaigns}
             onRefresh={() => fetchData(startDate, endDate)}
+            onSelectionChange={handleSelectionChange}
           />
         </>
       ) : (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Table,
   TableBody,
@@ -27,15 +27,21 @@ import { toast } from 'sonner'
 interface CampaignTableProps {
   campaigns: Campaign[]
   onRefresh?: () => void
+  onSelectionChange?: (selectedIds: string[]) => void
 }
 
 type SortField = 'status' | 'campanha' | 'roi' | 'gasto' | 'ganho' | 'lucro_prejuizo' | 'cpc' | 'ctr' | 'ecpm' | 'orcamento_diario'
 type SortOrder = 'asc' | 'desc'
 
-export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
+export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: CampaignTableProps) {
   const [sortField, setSortField] = useState<SortField>('roi')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  // Notificar o Dashboard quando a seleção mudar
+  useEffect(() => {
+    onSelectionChange?.(selectedIds)
+  }, [selectedIds, onSelectionChange])
 
   // Selecionar/deselecionar todas
   const handleSelectAll = (checked: boolean) => {

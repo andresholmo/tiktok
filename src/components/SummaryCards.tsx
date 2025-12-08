@@ -27,6 +27,10 @@ interface SummaryCardsProps {
   // Linha 3 - Orçamento (novo)
   orcamentoDiario?: number
   orcamentoRemanescente?: number
+  
+  // Info de seleção (opcional)
+  selectedCount?: number
+  isSelection?: boolean
 }
 
 export function SummaryCards({
@@ -39,10 +43,18 @@ export function SummaryCards({
   roiGeral,
   orcamentoDiario = 0,
   orcamentoRemanescente = 0,
+  selectedCount = 0,
+  isSelection = false,
 }: SummaryCardsProps) {
 
   return (
     <div className="space-y-4">
+      {/* Indicador de seleção */}
+      {isSelection && (
+        <div className="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-md mb-2">
+          📊 Exibindo dados de {selectedCount} campanha(s) selecionada(s)
+        </div>
+      )}
       {/* LINHA 1 - Real (3 colunas no desktop, 1 no mobile) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Faturamento TikTok */}

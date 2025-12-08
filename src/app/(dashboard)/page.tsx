@@ -200,7 +200,18 @@ export default function DashboardPage() {
     const totalLucro = totalGanho - totalGasto
     const roiGeral = totalGasto > 0 ? ((totalGanho - totalGasto) / totalGasto) * 100 : 0
     
-    return { totalGasto, totalGanho, totalLucro, roiGeral }
+    // NOVOS CÁLCULOS
+    const orcamentoDiario = campaigns.reduce((sum: number, c: Campaign) => sum + (c.orcamento_diario ?? 0), 0)
+    const orcamentoRemanescente = orcamentoDiario - totalGasto
+    
+    return { 
+      totalGasto, 
+      totalGanho, 
+      totalLucro, 
+      roiGeral,
+      orcamentoDiario,      // Novo
+      orcamentoRemanescente // Novo
+    }
   }, [filteredCampaigns])
 
   // Extrair opções únicas para os selects
@@ -369,16 +380,20 @@ export default function DashboardPage() {
         <>
           {/* Cards - Linha 1 usa totais FILTRADOS, Linha 2 usa totais GERAIS */}
           <SummaryCards
-            // Linha 1 - Rastreado (filtrado)
+            // Linha 1 - Real (fixo)
+            faturamentoTiktok={data.totals?.gamFaturamentoTotal ?? 0}
+            lucroReal={data.totals?.lucroReal ?? 0}
+            roiReal={data.totals?.roiReal ?? 0}
+            
+            // Linha 2 - Rastreado (filtrado)
             totalGasto={filteredTotals.totalGasto}
             totalGanho={filteredTotals.totalGanho}
             totalLucro={filteredTotals.totalLucro}
             roiGeral={filteredTotals.roiGeral}
             
-            // Linha 2 - Real (sempre total geral)
-            faturamentoTiktok={data.totals?.gamFaturamentoTotal ?? 0}
-            lucroReal={data.totals?.lucroReal ?? 0}
-            roiReal={data.totals?.roiReal ?? 0}
+            // Linha 3 - Orçamento (novo)
+            orcamentoDiario={filteredTotals.orcamentoDiario}
+            orcamentoRemanescente={filteredTotals.orcamentoRemanescente}
           />
 
           {/* Filtros da tabela */}

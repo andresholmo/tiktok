@@ -5,19 +5,6 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 300 // 5 minutos máximo
 
-// Verificar token de autorização
-function isAuthorized(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  
-  // Vercel envia o header automaticamente para cron jobs
-  if (authHeader === `Bearer ${cronSecret}`) {
-    return true
-  }
-  
-  return false
-}
-
 export async function GET(request: NextRequest) {
   console.log('=== CRON SYNC: Iniciando ===')
   console.log('Horário:', new Date().toISOString())

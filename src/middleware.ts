@@ -2,13 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname
-
-  // Ignorar rotas de cron - não aplicar middleware (cron jobs do Vercel não têm autenticação de usuário)
-  if (path.startsWith('/api/cron')) {
-    return NextResponse.next()
-  }
-
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -43,7 +36,7 @@ export async function middleware(request: NextRequest) {
   // Rotas públicas
   const publicRoutes = ['/login']
   const isPublicRoute = publicRoutes.some(route => 
-    path.startsWith(route)
+    request.nextUrl.pathname.startsWith(route)
   )
 
   // Se não está logado e não é rota pública, redireciona para login
@@ -65,7 +58,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Excluir rotas de cron do matcher
-    '/((?!api/cron|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

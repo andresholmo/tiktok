@@ -21,8 +21,7 @@ import {
   getLucroColor,
   getStatusColor,
 } from '@/lib/calculations'
-import { ArrowUpDown, ArrowUp, ArrowDown, Copy } from 'lucide-react'
-import { toast } from 'sonner'
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 interface CampaignTableProps {
   campaigns: Campaign[]
@@ -34,7 +33,7 @@ type SortOrder = 'asc' | 'desc'
 
 export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   const [sortField, setSortField] = useState<SortField>('roi')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc') // ROI decrescente por padrão
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // Selecionar/deselecionar todas
@@ -72,17 +71,12 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   const sortedCampaigns = useMemo(() => {
     const sorted = [...campaigns]
     sorted.sort((a, b) => {
-      let aValue: any = a[sortField] ?? 0
-      let bValue: any = b[sortField] ?? 0
+      let aValue: any = a[sortField]
+      let bValue: any = b[sortField]
 
-      // Converter para número se necessário (para campos numéricos)
-      const numericFields: SortField[] = ['roi', 'gasto', 'ganho', 'lucro_prejuizo', 'cpc', 'ctr', 'ecpm', 'orcamento_diario']
-      if (numericFields.includes(sortField)) {
-        aValue = parseFloat(aValue) || 0
-        bValue = parseFloat(bValue) || 0
-      } else if (typeof aValue === 'string') {
+      if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase()
-        bValue = typeof bValue === 'string' ? bValue.toLowerCase() : String(bValue).toLowerCase()
+        bValue = bValue.toLowerCase()
       }
 
       if (sortOrder === 'asc') {
@@ -97,23 +91,10 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
   // Função para alternar ordenação
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      // Se já está ordenando por esta coluna, inverte a direção
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     } else {
-      // Nova coluna, começa decrescente (maior no topo)
       setSortField(field)
-      setSortOrder('desc')
-    }
-  }
-
-  // Função para copiar texto
-  const copyToClipboard = async (text: string, message?: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast.success(message || 'Copiado!')
-    } catch (err) {
-      toast.error('Erro ao copiar')
-      console.error('Erro ao copiar:', err)
+      setSortOrder('asc')
     }
   }
 
@@ -153,8 +134,7 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
           )}
         </div>
         <BulkActions 
-          selectedCampaigns={selectedIds}
-          campaigns={campaigns}
+          selectedCampaigns={selectedIds} 
           onActionComplete={handleActionComplete}
         />
       </div>
@@ -226,7 +206,7 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">
-                      <div className="flex items-center gap-1 group">
+                      <div className="flex items-center gap-1">
                         {(() => {
                           // DEBUG: Log temporário
                           if (campaign.is_smart_plus) {
@@ -241,14 +221,7 @@ export function CampaignTable({ campaigns, onRefresh }: CampaignTableProps) {
                             </span>
                           ) : null
                         })()}
-                        <span 
-                          className="cursor-pointer hover:text-primary hover:underline flex items-center gap-1"
-                          onClick={() => copyToClipboard(campaign.campanha, `"${campaign.campanha}" copiado!`)}
-                          title="Clique para copiar"
-                        >
-                          {campaign.campanha}
-                          <Copy className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
-                        </span>
+                        <span>{campaign.campanha}</span>
                       </div>
                     </TableCell>
                     <TableCell className={`text-center ${getROIColor(campaign.roi ?? 0)}`}>

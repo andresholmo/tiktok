@@ -174,12 +174,12 @@ export function SummaryCards({
           </CardContent>
         </Card>
 
-        {/* Orçamento Remanescente */}
+        {/* Orçamento Restante */}
         <Card className={orcamentoRemanescente >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-orange-50 border-orange-100"}>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <span className={`text-xs sm:text-sm ${orcamentoRemanescente >= 0 ? 'text-emerald-600' : 'text-orange-600'}`}>
-                Orçamento Remanescente
+                Orçamento Restante
               </span>
               <PiggyBank className={`h-4 w-4 flex-shrink-0 ${orcamentoRemanescente >= 0 ? 'text-emerald-500' : 'text-orange-500'}`} />
             </div>

@@ -36,9 +36,22 @@ export function formatCurrencyBRL(value: number | null | undefined): string {
 
 /**
  * Formata porcentagem de forma segura
+ * Se o valor já estiver em porcentagem (ex: 28.42), apenas formata
+ * Se o valor estiver em decimal (ex: 0.2842), multiplica por 100 antes de formatar
+ * 
+ * @param value - Valor em porcentagem (28.42) ou decimal (0.2842)
+ * @param decimals - Número de casas decimais (padrão: 2)
+ * @param fromDecimal - Se true, assume que o valor está em decimal e multiplica por 100
  */
-export function formatPercentSafe(value: number | null | undefined, decimals: number = 2): string {
-  return `${(value ?? 0).toFixed(decimals)}%`
+export function formatPercentSafe(value: number | null | undefined, decimals: number = 2, fromDecimal: boolean = false): string {
+  if (value === null || value === undefined || isNaN(value)) {
+    return '0.00%'
+  }
+  
+  // Se fromDecimal é true, multiplica por 100 (0.2842 -> 28.42)
+  const finalValue = fromDecimal ? value * 100 : value
+  
+  return `${finalValue.toFixed(decimals)}%`
 }
 
 export function formatDate(date: string | Date): string {

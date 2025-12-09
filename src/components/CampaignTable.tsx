@@ -320,7 +320,7 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
                     </TableCell>
                     {/* Taxa de Conversão (CVR) - Roxo mais escuro, texto preto */}
                     <TableCell className="text-right bg-purple-200 text-gray-900 font-medium">
-                      {formatPercentSafe(campaign.conversion_rate ?? 0)}
+                      {formatPercentSafe(campaign.conversion_rate ?? 0, 2, true)}
                     </TableCell>
                     <TableCell className="text-center">
                       {formatCurrencyBRL(campaign.orcamento_diario ?? 0)}

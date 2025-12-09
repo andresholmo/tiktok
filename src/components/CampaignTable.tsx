@@ -230,8 +230,8 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
               <SortableHeader field="cpc" className="text-right">CPC</SortableHeader>
               <SortableHeader field="ctr" className="text-right">CTR</SortableHeader>
               <SortableHeader field="ecpm" className="text-right">eCPM</SortableHeader>
-              <SortableHeader field="cost_per_conversion" className="text-right bg-blue-200/50">CPA</SortableHeader>
-              <SortableHeader field="conversion_rate" className="text-right bg-purple-200/50">CVR</SortableHeader>
+              <SortableHeader field="cost_per_conversion" className="text-right">CPA</SortableHeader>
+              <SortableHeader field="conversion_rate" className="text-right">CVR</SortableHeader>
               <SortableHeader field="orcamento_diario" className="text-right">ORÇAM. DIÁRIO</SortableHeader>
             </TableRow>
           </TableHeader>
@@ -314,12 +314,12 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
                     <TableCell className={`text-center ${getECPMColor(campaign.ecpm ?? 0)}`}>
                       {formatCurrencyBRL(campaign.ecpm ?? 0)}
                     </TableCell>
-                    {/* Custo por Conversão (CPA) - Azul mais escuro, texto preto */}
-                    <TableCell className="text-right bg-blue-200 text-gray-900 font-medium">
+                    {/* Custo por Conversão (CPA) - Cor azul APENAS na célula do body */}
+                    <TableCell className="text-right bg-blue-100 text-gray-900">
                       {formatCurrencyBRL(campaign.cost_per_conversion ?? 0)}
                     </TableCell>
-                    {/* Taxa de Conversão (CVR) - Roxo mais escuro, texto preto */}
-                    <TableCell className="text-right bg-purple-200 text-gray-900 font-medium">
+                    {/* Taxa de Conversão (CVR) - Cor roxa APENAS na célula do body */}
+                    <TableCell className="text-right bg-purple-100 text-gray-900">
                       {formatPercentSafe(campaign.conversion_rate ?? 0)}
                     </TableCell>
                     <TableCell className="text-center">

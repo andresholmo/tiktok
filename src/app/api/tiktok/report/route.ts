@@ -206,8 +206,8 @@ export async function POST(request: NextRequest) {
         is_smart_plus: campaignInfo.is_smart_plus || false,
         conversions: parseFloat(metrics.conversion) || 0,
         cost_per_conversion: parseFloat(metrics.cost_per_conversion) || 0,
-        // CVR vem como decimal (0.2842 = 28.42%), manter como decimal (será convertido no display)
-        conversion_rate: parseFloat(metrics.conversion_rate) || 0,
+        // CVR vem como 2.843 (parcialmente convertido), dividir por 10 para normalizar (2.843 -> 0.2843 = 2.843%)
+        conversion_rate: (parseFloat(metrics.conversion_rate) || 0) / 10,
       }
       
       // DEBUG: Log campanha final

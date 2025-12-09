@@ -123,9 +123,17 @@ export async function GET(request: NextRequest) {
         existing.tiktok_clicks = (existing.tiktok_clicks || 0) + (Number(camp.tiktok_clicks ?? 0) || 0)
         existing.gam_impressions = (existing.gam_impressions || 0) + (Number(camp.gam_impressions ?? 0) || 0)
         existing.gam_clicks = (existing.gam_clicks || 0) + (Number(camp.gam_clicks ?? 0) || 0)
+        existing.conversions = (existing.conversions || 0) + (Number(camp.conversions ?? 0) || 0)
         // Preservar is_smart_plus (usar o primeiro valor encontrado)
         if (!existing.is_smart_plus && camp.is_smart_plus) {
           existing.is_smart_plus = camp.is_smart_plus
+        }
+        // Usar último valor de cost_per_conversion e conversion_rate
+        if (camp.cost_per_conversion !== undefined && camp.cost_per_conversion !== null) {
+          existing.cost_per_conversion = camp.cost_per_conversion
+        }
+        if (camp.conversion_rate !== undefined && camp.conversion_rate !== null) {
+          existing.conversion_rate = camp.conversion_rate
         }
       } else {
         campaignMap.set(name, { 
@@ -169,6 +177,9 @@ export async function GET(request: NextRequest) {
         ctr,
         cpc,
         ecpm,
+        conversions: Number(camp.conversions ?? 0) || 0,
+        cost_per_conversion: Number(camp.cost_per_conversion ?? 0) || 0,
+        conversion_rate: Number(camp.conversion_rate ?? 0) || 0,
         status: camp.tiktok_status || camp.status || (gasto > 0 ? 'ATIVO' : 'SEM DADOS'),
         is_smart_plus: Boolean(camp.is_smart_plus), // Garantir que existe
       }

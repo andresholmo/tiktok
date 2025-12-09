@@ -76,6 +76,11 @@ export interface Campaign {
   // Calculados
   profit?: number
   
+  // Conversões
+  conversions?: number
+  cost_per_conversion?: number  // Custo por Conversão (CPA)
+  conversion_rate?: number      // Taxa de Conversão (CVR) em %
+  
   created_at: string
 }
 

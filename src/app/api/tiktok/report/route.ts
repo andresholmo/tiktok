@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       report_type: 'BASIC',
       data_level: 'AUCTION_CAMPAIGN',
       dimensions: JSON.stringify(['campaign_id']),
-      metrics: JSON.stringify(['campaign_name', 'spend', 'cpc', 'ctr', 'impressions', 'clicks']),
+      metrics: JSON.stringify(['campaign_name', 'spend', 'cpc', 'ctr', 'impressions', 'clicks', 'conversion', 'cost_per_conversion', 'conversion_rate']),
       start_date: startDate,
       end_date: endDate,
       page_size: '1000',
@@ -204,6 +204,9 @@ export async function POST(request: NextRequest) {
         budget_mode: campaignInfo.budget_mode || 'BUDGET_MODE_DAY',
         status: status,
         is_smart_plus: campaignInfo.is_smart_plus || false,
+        conversions: parseFloat(metrics.conversion) || 0,
+        cost_per_conversion: parseFloat(metrics.cost_per_conversion) || 0,
+        conversion_rate: parseFloat(metrics.conversion_rate) || 0,
       }
       
       // DEBUG: Log campanha final

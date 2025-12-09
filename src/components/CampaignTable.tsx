@@ -30,7 +30,7 @@ interface CampaignTableProps {
   onSelectionChange?: (selectedIds: string[]) => void
 }
 
-type SortField = 'status' | 'campanha' | 'roi' | 'gasto' | 'ganho' | 'lucro_prejuizo' | 'cpc' | 'ctr' | 'ecpm' | 'orcamento_diario'
+type SortField = 'status' | 'campanha' | 'roi' | 'gasto' | 'ganho' | 'lucro_prejuizo' | 'cpc' | 'ctr' | 'ecpm' | 'cost_per_conversion' | 'conversion_rate' | 'orcamento_diario'
 type SortOrder = 'asc' | 'desc'
 
 export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: CampaignTableProps) {
@@ -121,6 +121,14 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
         case 'ecpm':
           aValue = a.ecpm ?? 0
           bValue = b.ecpm ?? 0
+          break
+        case 'cost_per_conversion':
+          aValue = a.cost_per_conversion ?? 0
+          bValue = b.cost_per_conversion ?? 0
+          break
+        case 'conversion_rate':
+          aValue = a.conversion_rate ?? 0
+          bValue = b.conversion_rate ?? 0
           break
         case 'orcamento_diario':
           aValue = a.orcamento_diario ?? 0
@@ -222,13 +230,15 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
               <SortableHeader field="cpc" className="text-right">CPC</SortableHeader>
               <SortableHeader field="ctr" className="text-right">CTR</SortableHeader>
               <SortableHeader field="ecpm" className="text-right">eCPM</SortableHeader>
+              <SortableHeader field="cost_per_conversion" className="text-right">CPA</SortableHeader>
+              <SortableHeader field="conversion_rate" className="text-right">CVR</SortableHeader>
               <SortableHeader field="orcamento_diario" className="text-right">ORÇAM. DIÁRIO</SortableHeader>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedCampaigns.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                   Nenhuma campanha encontrada
                 </TableCell>
               </TableRow>
@@ -303,6 +313,14 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
                     </TableCell>
                     <TableCell className={`text-center ${getECPMColor(campaign.ecpm ?? 0)}`}>
                       {formatCurrencyBRL(campaign.ecpm ?? 0)}
+                    </TableCell>
+                    {/* Custo por Conversão (CPA) - Azul claro */}
+                    <TableCell className="text-right bg-blue-50 text-blue-700">
+                      {formatCurrencyBRL(campaign.cost_per_conversion ?? 0)}
+                    </TableCell>
+                    {/* Taxa de Conversão (CVR) - Roxo claro */}
+                    <TableCell className="text-right bg-purple-50 text-purple-700">
+                      {formatPercentSafe(campaign.conversion_rate ?? 0)}
                     </TableCell>
                     <TableCell className="text-center">
                       {formatCurrencyBRL(campaign.orcamento_diario ?? 0)}

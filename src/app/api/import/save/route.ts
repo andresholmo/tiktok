@@ -14,6 +14,9 @@ interface TikTokCampaign {
   status?: string
   orcamento_diario?: number
   is_smart_plus?: boolean
+  conversions?: number
+  cost_per_conversion?: number
+  conversion_rate?: number
 }
 
 interface GAMCampaign {
@@ -141,6 +144,9 @@ export async function POST(request: NextRequest) {
         ecpm: gamCampaign?.ecpm || 0,
         orcamento_diario: tiktokCampaign.orcamento_diario || 0,
         is_smart_plus: isSmartPlusValue,
+        conversions: tiktokCampaign.conversions || 0,
+        cost_per_conversion: tiktokCampaign.cost_per_conversion || 0,
+        conversion_rate: tiktokCampaign.conversion_rate || 0,
       })
 
       // Remover do mapa para identificar campanhas GAM sem correspondência

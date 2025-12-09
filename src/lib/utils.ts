@@ -36,20 +36,31 @@ export function formatCurrencyBRL(value: number | null | undefined): string {
 
 /**
  * Formata porcentagem de forma segura
- * Se o valor já estiver em porcentagem (ex: 28.42), apenas formata
- * Se o valor estiver em decimal (ex: 0.2842), multiplica por 100 antes de formatar
+ * Detecta automaticamente se o valor está em decimal ou porcentagem:
+ * - Se valor < 1: assume decimal e multiplica por 100 (0.2842 -> 28.42%)
+ * - Se valor >= 1: assume porcentagem e apenas formata (28.42 -> 28.42%)
  * 
  * @param value - Valor em porcentagem (28.42) ou decimal (0.2842)
  * @param decimals - Número de casas decimais (padrão: 2)
- * @param fromDecimal - Se true, assume que o valor está em decimal e multiplica por 100
+ * @param fromDecimal - DEPRECATED: Se true, força multiplicação por 100 (mantido para compatibilidade)
  */
-export function formatPercentSafe(value: number | null | undefined, decimals: number = 2, fromDecimal: boolean = false): string {
+export function formatPercentSafe(value: number | null | undefined, decimals: number = 2, fromDecimal?: boolean): string {
   if (value === null || value === undefined || isNaN(value)) {
     return '0.00%'
   }
   
-  // Se fromDecimal é true, multiplica por 100 (0.2842 -> 28.42)
-  const finalValue = fromDecimal ? value * 100 : value
+  let finalValue = value
+  
+  // Se fromDecimal foi explicitamente passado como true, usar (compatibilidade)
+  if (fromDecimal === true) {
+    finalValue = value * 100
+  } else {
+    // Detecção automática: se valor < 1, assume decimal e multiplica por 100
+    // Isso resolve tanto dados novos (decimais) quanto dados antigos (já em porcentagem)
+    if (Math.abs(value) < 1 && value !== 0) {
+      finalValue = value * 100
+    }
+  }
   
   return `${finalValue.toFixed(decimals)}%`
 }

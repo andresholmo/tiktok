@@ -79,7 +79,7 @@ export interface Campaign {
   // Conversões
   conversions?: number
   cost_per_conversion?: number  // Custo por Conversão (CPA)
-  conversion_rate?: number      // Taxa de Conversão (CVR) em %
+  conversion_rate?: number      // Taxa de Conversão (CVR) em decimal (0.2842 = 28.42%)
   
   created_at: string
 }

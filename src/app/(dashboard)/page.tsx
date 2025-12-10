@@ -216,20 +216,33 @@ export default function DashboardPage() {
       )
     }
     
+    // Cálculos normais (todas as campanhas selecionadas/filtradas)
     const totalGasto = campaignsToCalculate.reduce((sum: number, c: Campaign) => sum + (c.gasto ?? 0), 0)
     const totalGanho = campaignsToCalculate.reduce((sum: number, c: Campaign) => sum + (c.ganho ?? 0), 0)
     const totalLucro = totalGanho - totalGasto
     const roiGeral = totalGasto > 0 ? ((totalGanho - totalGasto) / totalGasto) * 100 : 0
+    
+    // ORÇAMENTO DIÁRIO: Soma de TODAS as campanhas (ativas + pausadas)
     const orcamentoDiario = campaignsToCalculate.reduce((sum: number, c: Campaign) => sum + (c.orcamento_diario ?? 0), 0)
-    const orcamentoRestante = orcamentoDiario - totalGasto
+    
+    // ORÇAMENTO RESTANTE: Apenas campanhas ATIVAS
+    const campanhasAtivas = campaignsToCalculate.filter((c: Campaign) => 
+      c.status === 'ATIVO' || c.status === 'ENABLE' || c.status === 'ACTIVE'
+    )
+    
+    const orcamentoAtivas = campanhasAtivas.reduce((sum: number, c: Campaign) => sum + (c.orcamento_diario ?? 0), 0)
+    const gastoAtivas = campanhasAtivas.reduce((sum: number, c: Campaign) => sum + (c.gasto ?? 0), 0)
+    
+    // Restante = Orçamento das ativas - Gasto das ativas
+    const orcamentoRestante = orcamentoAtivas - gastoAtivas
     
     return { 
       totalGasto, 
       totalGanho, 
       totalLucro, 
       roiGeral,
-      orcamentoDiario,
-      orcamentoRestante,
+      orcamentoDiario,      // Todas as campanhas
+      orcamentoRestante,    // Apenas ativas
       count: campaignsToCalculate.length,
       isFiltered: selectedCampaignIds.length > 0
     }

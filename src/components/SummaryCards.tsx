@@ -99,7 +99,7 @@ export function SummaryCards({
               <Target className={`h-4 w-4 flex-shrink-0 ${roiReal >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </div>
             <div className={`text-xl sm:text-2xl font-bold mt-1 ${roiReal >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {formatPercentSafe(roiReal)}
+              {roiReal.toFixed(2)}%
             </div>
             <p className={`text-xs mt-1 hidden sm:block ${roiReal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
               (Faturamento - Gasto) / Gasto
@@ -163,7 +163,7 @@ export function SummaryCards({
               <Target className={`h-4 w-4 flex-shrink-0 ${roiGeral >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </div>
             <div className={`text-lg sm:text-2xl font-bold mt-1 ${roiGeral >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatPercentSafe(roiGeral)}
+              {roiGeral.toFixed(2)}%
             </div>
             <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Baseado no Ganho Rastreado</p>
           </CardContent>

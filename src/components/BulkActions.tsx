@@ -33,6 +33,37 @@ export function BulkActions({ selectedCampaigns, campaigns, onActionComplete, di
   const [loading, setLoading] = useState(false)
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false)
   const [newBudget, setNewBudget] = useState('')
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  // Função para sincronizar TikTok rapidamente
+  const syncTikTokQuick = async () => {
+    setIsSyncing(true)
+    toast.info('Sincronizando dados do TikTok...')
+    
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      
+      const response = await fetch('/api/tiktok/sync-quick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate: today, endDate: today }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        console.log('Sync rápido concluído:', data.campaigns, 'campanhas')
+        toast.success('Dados atualizados!')
+      } else {
+        throw new Error(data.error || 'Erro ao sincronizar')
+      }
+    } catch (error: any) {
+      console.error('Erro no sync rápido:', error)
+      toast.error('Erro ao sincronizar: ' + (error.message || 'Erro desconhecido'))
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   const handleStatusChange = async (status: 'ENABLE' | 'DISABLE') => {
     if (selectedCampaigns.length === 0) {
@@ -58,6 +89,9 @@ export function BulkActions({ selectedCampaigns, campaigns, onActionComplete, di
       }
 
       toast.success(data.message)
+      
+      // Sincronizar TikTok e recarregar dados
+      await syncTikTokQuick()
       onActionComplete()
     } catch (error: any) {
       toast.error(error.message)
@@ -117,6 +151,9 @@ export function BulkActions({ selectedCampaigns, campaigns, onActionComplete, di
       toast.success(data.message)
       setBudgetDialogOpen(false)
       setNewBudget('')
+      
+      // Sincronizar TikTok e recarregar dados
+      await syncTikTokQuick()
       onActionComplete()
     } catch (error: any) {
       toast.error(error.message)
@@ -125,14 +162,14 @@ export function BulkActions({ selectedCampaigns, campaigns, onActionComplete, di
     }
   }
 
-  const isDisabled = disabled || loading || selectedCampaigns.length === 0
+  const isDisabled = disabled || loading || isSyncing || selectedCampaigns.length === 0
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" disabled={isDisabled}>
-            {loading ? (
+            {(loading || isSyncing) ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <ChevronDown className="h-4 w-4 mr-2" />

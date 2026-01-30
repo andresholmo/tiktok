@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveAdvertiserId, getTikTokAccessToken } from '@/lib/tiktok-accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,20 +17,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { data: credentials, error: credError } = await supabase
-      .from('tiktok_credentials')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-
-    if (credError || !credentials) {
-      return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
-    }
-
-    if (!credentials.access_token || !credentials.advertiser_id) {
-      return NextResponse.json({ error: 'Credenciais incompletas. Reconecte o TikTok.' }, { status: 400 })
-    }
-
     const body = await request.json()
     const { startDate, endDate, userId: bodyUserId } = body
     
@@ -40,8 +27,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Datas obrigatórias' }, { status: 400 })
     }
 
-    const advertiserId = credentials.advertiser_id
-    const accessToken = credentials.access_token
+    // Buscar access token
+    const accessToken = await getTikTokAccessToken(supabase, finalUserId)
+    if (!accessToken) {
+      return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
+    }
+
+    // Buscar advertiser_id da conta ativa
+    const advertiserId = await getActiveAdvertiserId(supabase, finalUserId)
+    if (!advertiserId) {
+      return NextResponse.json({ 
+        error: 'Nenhuma conta TikTok configurada. Vá em Configurações para adicionar.' 
+      }, { status: 400 })
+    }
 
     // ========== 1. BUSCAR RELATÓRIO (gastos, CPC, CTR) ==========
     const reportParams = new URLSearchParams({

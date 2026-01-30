@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   if (!authCode) {
     console.error('Código de autorização não recebido')
-    return NextResponse.redirect(new URL('/importar?error=no_code', request.url))
+    return NextResponse.redirect(new URL('/configuracoes?error=no_code', request.url))
   }
 
   const appId = process.env.TIKTOK_APP_ID
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   if (!appId || !appSecret) {
     console.error('Configuração do TikTok não encontrada')
-    return NextResponse.redirect(new URL('/importar?error=config', request.url))
+    return NextResponse.redirect(new URL('/configuracoes?error=config', request.url))
   }
 
   try {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.code !== 0) {
       console.error('Erro ao obter token:', tokenData)
-      return NextResponse.redirect(new URL('/importar?error=token', request.url))
+      return NextResponse.redirect(new URL('/configuracoes?error=token', request.url))
     }
 
     const accessToken = tokenData.data.access_token
@@ -64,14 +64,14 @@ export async function GET(request: NextRequest) {
 
       if (error) {
         console.error('Erro ao salvar credenciais:', error)
-        return NextResponse.redirect(new URL('/importar?error=save', request.url))
+        return NextResponse.redirect(new URL('/configuracoes?error=save', request.url))
       }
     }
 
-    return NextResponse.redirect(new URL('/importar?success=tiktok_connected', request.url))
+    return NextResponse.redirect(new URL('/configuracoes?success=tiktok_connected', request.url))
   } catch (error) {
     console.error('Erro no callback TikTok:', error)
-    return NextResponse.redirect(new URL('/importar?error=unknown', request.url))
+    return NextResponse.redirect(new URL('/configuracoes?error=unknown', request.url))
   }
 }
 

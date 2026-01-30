@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveAdvertiserId, getTikTokAccessToken } from '@/lib/tiktok-accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,15 +28,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
     }
 
-    // Buscar access token do TikTok
-    const { data: credentials, error: credError } = await supabase
-      .from('tiktok_credentials')
-      .select('access_token, advertiser_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (credError || !credentials?.access_token || !credentials?.advertiser_id) {
+    // Buscar access token e advertiser_id da conta ativa
+    const accessToken = await getTikTokAccessToken(supabase, user.id)
+    if (!accessToken) {
       return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
+    }
+
+    const advertiserId = await getActiveAdvertiserId(supabase, user.id)
+    if (!advertiserId) {
+      return NextResponse.json({ 
+        error: 'Nenhuma conta TikTok configurada. Vá em Configurações para adicionar.' 
+      }, { status: 400 })
     }
 
     // Chamar API do TikTok para atualizar status
@@ -44,11 +47,11 @@ export async function POST(request: NextRequest) {
       {
         method: 'POST',
         headers: {
-          'Access-Token': credentials.access_token,
+          'Access-Token': accessToken,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          advertiser_id: credentials.advertiser_id,
+          advertiser_id: advertiserId,
           campaign_ids: campaignIds,
           operation_status: status,
         }),

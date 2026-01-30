@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { BarChart3, Upload, History, LogOut, User } from 'lucide-react'
+import { BarChart3, Settings, History, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
+import { AccountSelector } from '@/components/AccountSelector'
 
 export function Navbar() {
   const pathname = usePathname()
@@ -29,7 +30,7 @@ export function Navbar() {
 
   const links = [
     { href: '/', label: 'Dashboard', icon: BarChart3 },
-    { href: '/importar', label: 'Importar', icon: Upload },
+    { href: '/configuracoes', label: 'Configurações', icon: Settings },
     { href: '/historico', label: 'Histórico', icon: History },
   ]
 
@@ -63,6 +64,7 @@ export function Navbar() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <AccountSelector />
             {userEmail && (
               <span className="hidden md:flex items-center gap-2 text-sm text-gray-600">
                 <User className="h-4 w-4" />

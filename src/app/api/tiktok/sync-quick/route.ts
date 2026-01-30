@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveAdvertiserId, getTikTokAccessToken } from '@/lib/tiktok-accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,15 +13,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Buscar credenciais
-    const { data: credentials } = await supabase
-      .from('tiktok_credentials')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!credentials?.access_token || !credentials?.advertiser_id) {
+    // Buscar access token e advertiser_id da conta ativa
+    const accessToken = await getTikTokAccessToken(supabase, user.id)
+    if (!accessToken) {
       return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
+    }
+
+    const advertiserId = await getActiveAdvertiserId(supabase, user.id)
+    if (!advertiserId) {
+      return NextResponse.json({ 
+        error: 'Nenhuma conta TikTok configurada. Vá em Configurações para adicionar.' 
+      }, { status: 400 })
     }
 
     const { startDate, endDate } = await request.json()
@@ -31,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // Buscar apenas campanhas do TikTok (orçamento e status)
     const campaignParams = new URLSearchParams({
-      advertiser_id: credentials.advertiser_id,
+      advertiser_id: advertiserId,
       fields: JSON.stringify([
         'campaign_id', 
         'campaign_name', 
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(campaignUrl, {
       method: 'GET',
-      headers: { 'Access-Token': credentials.access_token },
+      headers: { 'Access-Token': accessToken },
     })
 
     const data = await response.json()

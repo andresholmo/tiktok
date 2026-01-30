@@ -201,6 +201,39 @@ export async function POST(request: NextRequest) {
     const results = await resultsResponse.json()
     console.log('Resultados obtidos:', results.rows?.length || 0, 'linhas')
 
+    // ========== DEBUG: Estrutura dos dados ==========
+    if (results.rows && results.rows.length > 0) {
+      console.log('=== DEBUG GAM DATA ===')
+      console.log('Primeiras 3 linhas brutas:', JSON.stringify(results.rows.slice(0, 3), null, 2))
+      
+      const firstRow = results.rows[0]
+      console.log('Estrutura da primeira linha:', {
+        hasDimensionValues: !!firstRow.dimensionValues,
+        hasMetricValueGroups: !!firstRow.metricValueGroups,
+        keys: Object.keys(firstRow),
+        dimensionValues: firstRow.dimensionValues,
+        metricValueGroups: firstRow.metricValueGroups,
+      })
+      
+      if (firstRow.dimensionValues) {
+        console.log('Dimension values:', firstRow.dimensionValues.map((d: any, i: number) => ({
+          index: i,
+          intValue: d.intValue,
+          stringValue: d.stringValue,
+          value: d.value,
+        })))
+      }
+      
+      if (firstRow.metricValueGroups?.[0]?.primaryValues) {
+        console.log('Metric values:', firstRow.metricValueGroups[0].primaryValues.map((m: any, i: number) => ({
+          index: i,
+          intValue: m.intValue,
+          doubleValue: m.doubleValue,
+          value: m.value,
+        })))
+      }
+    }
+
     // 6. Processar dados
     interface CampaignData {
       data: string
@@ -213,6 +246,9 @@ export async function POST(request: NextRequest) {
     }
 
     const campaigns: CampaignData[] = []
+    let processedCount = 0
+    let skippedCount = 0
+    let noUtmCampaignCount = 0
 
     if (results.rows) {
       for (const row of results.rows) {
@@ -227,28 +263,62 @@ export async function POST(request: NextRequest) {
           : dateStr
 
         // KEY_VALUES_NAME vem como stringValue
-        const keyValue = dimensions[1]?.stringValue || ''
-        const campaignMatch = keyValue.match(/utm_campaign=([^,\s]+)/)
+        const keyValue = dimensions[1]?.stringValue || dimensions[1]?.value || ''
+        
+        // DEBUG: Log keyValue para as primeiras linhas
+        if (processedCount + skippedCount < 5) {
+          console.log(`Linha ${processedCount + skippedCount}: keyValue = "${keyValue}"`)
+        }
+        
+        // Extrair utm_campaign (remover filtro GUP-01 para processar todas)
+        const campaignMatch = keyValue.match(/utm_campaign=([^,&\s]+)/)
 
-        if (campaignMatch && campaignMatch[1].includes('GUP-01')) {
-          const impressoes = parseInt(metrics[0]?.intValue || '0')
-          const cliques = parseInt(metrics[1]?.intValue || '0')
-          const ctr = (metrics[2]?.doubleValue || 0) * 100
-          const receita = metrics[3]?.doubleValue || 0
-          const ecpm = metrics[4]?.doubleValue || 0
+        if (!campaignMatch) {
+          noUtmCampaignCount++
+          if (noUtmCampaignCount <= 3) {
+            console.log(`Linha sem utm_campaign: keyValue = "${keyValue}"`)
+          }
+          continue
+        }
 
-          campaigns.push({
-            data: formattedDate,
-            campanha: campaignMatch[1],
+        const campaignName = campaignMatch[1]
+        
+        // Processar TODAS as campanhas que têm utm_campaign (removido filtro GUP-01)
+        const impressoes = parseInt(metrics[0]?.intValue || metrics[0]?.value || '0')
+        const cliques = parseInt(metrics[1]?.intValue || metrics[1]?.value || '0')
+        const ctr = (metrics[2]?.doubleValue || metrics[2]?.value || 0) * 100
+        const receita = metrics[3]?.doubleValue || metrics[3]?.value || 0
+        const ecpm = metrics[4]?.doubleValue || metrics[4]?.value || 0
+
+        campaigns.push({
+          data: formattedDate,
+          campanha: campaignName,
+          impressoes,
+          cliques,
+          ctr,
+          receita,
+          ecpm,
+        })
+        
+        processedCount++
+        
+        // DEBUG: Log primeiras campanhas processadas
+        if (processedCount <= 5) {
+          console.log(`Campanha processada ${processedCount}:`, {
+            campanha: campaignName,
+            receita,
             impressoes,
             cliques,
-            ctr,
-            receita,
-            ecpm,
           })
         }
       }
     }
+
+    console.log(`=== RESUMO DO PROCESSAMENTO ===`)
+    console.log(`Total de linhas: ${results.rows?.length || 0}`)
+    console.log(`Campanhas processadas: ${processedCount}`)
+    console.log(`Linhas sem utm_campaign: ${noUtmCampaignCount}`)
+    console.log(`Primeiras 5 campanhas:`, campaigns.slice(0, 5).map(c => c.campanha))
 
     // Agrupar por campanha
     const aggregated = campaigns.reduce((acc, curr) => {

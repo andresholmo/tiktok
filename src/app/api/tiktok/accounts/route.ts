@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - Remover conta
+// DELETE - Remover conta e limpar dados associados
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -101,32 +101,77 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID da conta é obrigatório' }, { status: 400 })
     }
 
-    // Verificar se a conta pertence ao usuário
+    // Buscar dados da conta antes de deletar
     const { data: account } = await supabase
       .from('tiktok_accounts')
-      .select('is_active')
+      .select('id, advertiser_id, is_active, name')
       .eq('id', accountId)
       .eq('user_id', user.id)
-      .maybeSingle()
+      .single()
 
     if (!account) {
       return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
     }
 
-    // Deletar
-    const { error } = await supabase
+    console.log(`=== EXCLUINDO CONTA TikTok: ${account.name} (${account.advertiser_id}) ===`)
+
+    // 1. Buscar importações do usuário que têm campanhas desse advertiser_id
+    // As campanhas são identificadas pelo nome que contém padrões específicos do advertiser
+    // Vamos deletar todas as importações e campanhas do usuário associadas a este advertiser
+    
+    // Buscar IDs das importações do usuário
+    const { data: userImports } = await supabase
+      .from('imports')
+      .select('id')
+      .eq('user_id', user.id)
+
+    if (userImports && userImports.length > 0) {
+      const importIds = userImports.map(i => i.id)
+      
+      // 2. Deletar campanhas dessas importações
+      // Como as campanhas são importadas por conta/advertiser,
+      // deletamos todas as campanhas das importações do usuário
+      const { error: campaignsError, count: deletedCampaigns } = await supabase
+        .from('campaigns')
+        .delete({ count: 'exact' })
+        .in('import_id', importIds)
+
+      if (campaignsError) {
+        console.error('Erro ao deletar campanhas:', campaignsError)
+      } else {
+        console.log(`Campanhas deletadas: ${deletedCampaigns}`)
+      }
+
+      // 3. Deletar importações do usuário
+      const { error: importsError, count: deletedImports } = await supabase
+        .from('imports')
+        .delete({ count: 'exact' })
+        .eq('user_id', user.id)
+
+      if (importsError) {
+        console.error('Erro ao deletar importações:', importsError)
+      } else {
+        console.log(`Importações deletadas: ${deletedImports}`)
+      }
+    }
+
+    // 4. Deletar a conta TikTok
+    const { error: accountError } = await supabase
       .from('tiktok_accounts')
       .delete()
       .eq('id', accountId)
       .eq('user_id', user.id)
 
-    if (error) throw error
+    if (accountError) {
+      console.error('Erro ao deletar conta:', accountError)
+      return NextResponse.json({ error: 'Erro ao excluir conta' }, { status: 500 })
+    }
 
-    // Se era a conta ativa, ativar outra
+    // 5. Se era a conta ativa, ativar outra
     if (account.is_active) {
       const { data: nextAccount } = await supabase
         .from('tiktok_accounts')
-        .select('id')
+        .select('id, name')
         .eq('user_id', user.id)
         .limit(1)
         .maybeSingle()
@@ -134,19 +179,29 @@ export async function DELETE(request: NextRequest) {
       if (nextAccount) {
         await supabase
           .from('tiktok_accounts')
-          .update({ is_active: true })
+          .update({ is_active: true, updated_at: new Date().toISOString() })
           .eq('id', nextAccount.id)
+        
+        console.log(`Nova conta ativa: ${nextAccount.name}`)
       }
     }
 
-    return NextResponse.json({ success: true })
+    console.log(`=== CONTA ${account.name} EXCLUÍDA COM SUCESSO ===`)
+
+    return NextResponse.json({ 
+      success: true,
+      message: `Conta "${account.name}" excluída com todos os dados associados.`
+    })
   } catch (error) {
     console.error('Erro ao remover conta:', error)
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Erro interno', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    )
   }
 }
 
-// PATCH - Ativar conta
+// PATCH - Ativar conta (e limpar dados da conta anterior)
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -162,6 +217,43 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'ID da conta é obrigatório' }, { status: 400 })
     }
 
+    // Limpar dados da sincronização anterior
+    console.log('=== TROCANDO CONTA ATIVA ===')
+    
+    // Buscar importações do usuário
+    const { data: userImports } = await supabase
+      .from('imports')
+      .select('id')
+      .eq('user_id', user.id)
+
+    if (userImports && userImports.length > 0) {
+      const importIds = userImports.map(i => i.id)
+      
+      // Deletar campanhas
+      const { error: campaignsError } = await supabase
+        .from('campaigns')
+        .delete()
+        .in('import_id', importIds)
+
+      if (campaignsError) {
+        console.error('Erro ao deletar campanhas:', campaignsError)
+      } else {
+        console.log('Campanhas deletadas')
+      }
+
+      // Deletar importações
+      const { error: importsError } = await supabase
+        .from('imports')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (importsError) {
+        console.error('Erro ao deletar importações:', importsError)
+      } else {
+        console.log('Importações deletadas')
+      }
+    }
+    
     // Primeiro, desativar todas as contas do usuário
     await supabase
       .from('tiktok_accounts')
@@ -179,9 +271,14 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error
 
+    console.log(`Conta ativa: ${account.name} (${account.advertiser_id})`)
+
     return NextResponse.json({ account })
   } catch (error) {
     console.error('Erro ao ativar conta:', error)
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Erro interno', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    )
   }
 }

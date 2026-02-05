@@ -94,19 +94,60 @@ export default function ConfiguracoesPage() {
     }
   }
 
-  const deleteAccount = async (accountId: string) => {
-    if (!confirm('Tem certeza que deseja remover esta conta?')) return
+  const deleteAccount = async (accountId: string, accountName: string) => {
+    // Confirmação detalhada
+    const confirmed = confirm(
+      `⚠️ Excluir conta "${accountName}"?\n\n` +
+      `Isso também irá excluir:\n` +
+      `• Todas as campanhas importadas\n` +
+      `• Todo o histórico de sincronizações\n\n` +
+      `Você precisará sincronizar novamente após reconectar.\n\n` +
+      `Deseja continuar?`
+    )
+    
+    if (!confirmed) return
 
     try {
+      setSaving(true)
+      
       const res = await fetch(`/api/tiktok/accounts?id=${accountId}`, {
         method: 'DELETE',
       })
 
+      const data = await res.json()
+
       if (res.ok) {
+        // Remover da lista local
         setAccounts(prev => prev.filter(a => a.id !== accountId))
+        
+        // Mostrar mensagem de sucesso
+        setMessage({ 
+          type: 'success', 
+          text: data.message || 'Conta excluída com sucesso!' 
+        })
+        
+        // Limpar mensagem após 5 segundos
+        setTimeout(() => setMessage(null), 5000)
+      } else {
+        setMessage({ 
+          type: 'error', 
+          text: data.error || 'Erro ao excluir conta' 
+        })
+        
+        // Limpar mensagem após 5 segundos
+        setTimeout(() => setMessage(null), 5000)
       }
     } catch (error) {
       console.error('Erro ao remover conta:', error)
+      setMessage({ 
+        type: 'error', 
+        text: 'Erro ao excluir conta. Tente novamente.' 
+      })
+      
+      // Limpar mensagem após 5 segundos
+      setTimeout(() => setMessage(null), 5000)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -192,8 +233,9 @@ export default function ConfiguracoesPage() {
                     <p className="text-sm text-gray-500 font-mono">{account.advertiser_id}</p>
                   </div>
                   <button
-                    onClick={() => deleteAccount(account.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={() => deleteAccount(account.id, account.name)}
+                    disabled={saving}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Remover conta"
                   >
                     <Trash2 size={18} />

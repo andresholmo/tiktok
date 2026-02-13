@@ -414,20 +414,12 @@ export default function DashboardPage() {
         <>
           {/* Cards - Linha 1 usa totais FILTRADOS, Linha 2 usa totais GERAIS */}
           <SummaryCards
-            // Linha 1 - Real (fixo - não muda com seleção)
-            faturamentoTiktok={data.totals?.gamFaturamentoTotal ?? 0}
-            lucroReal={data.totals?.lucroReal ?? 0}
-            roiReal={data.totals?.roiReal ?? 0}
-            
-            // Linha 2 e 3 - Dinâmicos (mudam com seleção)
             totalGasto={displayTotals.totalGasto}
             totalGanho={displayTotals.totalGanho}
             totalLucro={displayTotals.totalLucro}
             roiGeral={displayTotals.roiGeral}
             orcamentoDiario={displayTotals.orcamentoDiario}
             orcamentoRemanescente={displayTotals.orcamentoRestante}
-            
-            // Info de seleção (opcional - para mostrar indicador)
             selectedCount={displayTotals.count}
             isSelection={displayTotals.isFiltered}
           />

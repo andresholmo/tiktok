@@ -6,25 +6,19 @@ import {
   TrendingUp, 
   TrendingDown, 
   Target, 
-  Zap,
   Wallet,
   PiggyBank
 } from 'lucide-react'
-import { formatCurrencyBRL, formatPercentSafe } from '@/lib/utils'
+import { formatCurrencyBRL } from '@/lib/utils'
 
 interface SummaryCardsProps {
-  // Linha 1 - Real
-  faturamentoTiktok: number
-  lucroReal: number
-  roiReal: number
-  
-  // Linha 2 - Rastreado
+  // Linha 1 - Rastreado
   totalGasto: number
   totalGanho: number
   totalLucro: number
   roiGeral: number
   
-  // Linha 3 - Orçamento (novo)
+  // Linha 2 - Orçamento
   orcamentoDiario?: number
   orcamentoRemanescente?: number
   
@@ -34,9 +28,6 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({
-  faturamentoTiktok,
-  lucroReal,
-  roiReal,
   totalGasto,
   totalGanho,
   totalLucro,
@@ -55,60 +46,7 @@ export function SummaryCards({
           📊 Exibindo dados de {selectedCount} campanha(s) selecionada(s)
         </div>
       )}
-      {/* LINHA 1 - Real (3 colunas no desktop, 1 no mobile) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        {/* Faturamento TikTok */}
-        <Card className="bg-blue-50 border-blue-100">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm text-blue-600">Faturamento TikTok</span>
-              <Zap className="h-4 w-4 text-blue-500 flex-shrink-0" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-blue-700 mt-1">
-              {formatCurrencyBRL(faturamentoTiktok)}
-            </div>
-            <p className="text-xs text-blue-500 mt-1 hidden sm:block">Total no GAM (inclui não rastreado)</p>
-          </CardContent>
-        </Card>
-
-        {/* Lucro Real */}
-        <Card className={lucroReal >= 0 ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"}>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <span className={`text-xs sm:text-sm ${lucroReal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                Lucro Real
-              </span>
-              <TrendingUp className={`h-4 w-4 flex-shrink-0 ${lucroReal >= 0 ? 'text-green-500' : 'text-red-500'}`} />
-            </div>
-            <div className={`text-xl sm:text-2xl font-bold mt-1 ${lucroReal >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {formatCurrencyBRL(lucroReal)}
-            </div>
-            <p className={`text-xs mt-1 hidden sm:block ${lucroReal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              Faturamento - Gasto Total
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* ROI Real */}
-        <Card className={roiReal >= 0 ? "bg-green-50 border-green-100" : "bg-red-50 border-red-100"}>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <span className={`text-xs sm:text-sm ${roiReal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ROI Real
-              </span>
-              <Target className={`h-4 w-4 flex-shrink-0 ${roiReal >= 0 ? 'text-green-500' : 'text-red-500'}`} />
-            </div>
-            <div className={`text-xl sm:text-2xl font-bold mt-1 ${roiReal >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {roiReal.toFixed(2)}%
-            </div>
-            <p className={`text-xs mt-1 hidden sm:block ${roiReal >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              (Faturamento - Gasto) / Gasto
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* LINHA 2 - Rastreado (4 colunas no desktop, 2 no mobile) */}
+      {/* LINHA 1 - Rastreado (4 colunas no desktop, 2 no mobile) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Gasto Total */}
         <Card>
@@ -170,7 +108,7 @@ export function SummaryCards({
         </Card>
       </div>
 
-      {/* LINHA 3 - Orçamento (2 colunas no desktop, 1 no mobile) */}
+      {/* LINHA 2 - Orçamento (2 colunas no desktop, 1 no mobile) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {/* Orçamento Diário */}
         <Card className="bg-purple-50 border-purple-100">

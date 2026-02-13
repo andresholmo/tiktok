@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-
 import { createClient } from '@/lib/supabase/server'
-
 import { parseTikTokFile, parseGAMFile, mergeData } from '@/lib/parseFiles'
-
 import { calculateTotals } from '@/lib/calculations'
+import { getActiveAdvertiserId } from '@/lib/tiktok-accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,15 +33,15 @@ export async function POST(request: NextRequest) {
     const campaigns = mergeData(tiktokData, gamData)
     const totals = calculateTotals(campaigns as any)
 
+    const advertiserId = await getActiveAdvertiserId(supabase, user.id)
+
     // Calcular ROI Real e Lucro Real
     const lucroReal = faturamentoTiktok - totals.totalGasto
     const roiReal = totals.totalGasto > 0 ? ((faturamentoTiktok - totals.totalGasto) / totals.totalGasto) * 100 : 0
 
-    const { data: importData, error: importError } = await supabase
-      .from('imports')
-      .insert({
-        date,
-        user_id: user.id,
+    const insertPayload: Record<string, unknown> = {
+      date,
+      user_id: user.id,
         total_gasto: totals.totalGasto,
         total_ganho: totals.totalGanho,
         total_lucro: totals.totalLucro,
@@ -51,7 +49,13 @@ export async function POST(request: NextRequest) {
         faturamento_tiktok: faturamentoTiktok,
         lucro_real: lucroReal,
         roi_real: roiReal,
-      })
+      }
+    if (advertiserId != null) {
+      insertPayload.advertiser_id = advertiserId
+    }
+    const { data: importData, error: importError } = await supabase
+      .from('imports')
+      .insert(insertPayload)
       .select()
       .single()
 
@@ -60,9 +64,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao salvar importação' }, { status: 500 })
     }
 
-    const campaignsToInsert = campaigns.map(c => ({
+    const campaignsToInsert = campaigns.map((c: Record<string, unknown>) => ({
       ...c,
       import_id: importData.id,
+      ...(advertiserId != null && { advertiser_id: advertiserId }),
     }))
 
     const { error: campaignsError } = await supabase

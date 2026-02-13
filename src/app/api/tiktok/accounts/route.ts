@@ -115,43 +115,39 @@ export async function DELETE(request: NextRequest) {
 
     console.log(`=== EXCLUINDO CONTA TikTok: ${account.name} (${account.advertiser_id}) ===`)
 
-    // 1. Buscar importações do usuário que têm campanhas desse advertiser_id
-    // As campanhas são identificadas pelo nome que contém padrões específicos do advertiser
-    // Vamos deletar todas as importações e campanhas do usuário associadas a este advertiser
-    
-    // Buscar IDs das importações do usuário
-    const { data: userImports } = await supabase
-      .from('imports')
-      .select('id')
-      .eq('user_id', user.id)
-
-    if (userImports && userImports.length > 0) {
-      const importIds = userImports.map(i => i.id)
-      
-      // 2. Deletar campanhas dessas importações
-      // Como as campanhas são importadas por conta/advertiser,
-      // deletamos todas as campanhas das importações do usuário
-      const { error: campaignsError, count: deletedCampaigns } = await supabase
+    // Deletar apenas dados desta conta (advertiser_id)
+    if (account.advertiser_id) {
+      // Campanhas desta conta
+      const { error: campaignsError } = await supabase
         .from('campaigns')
-        .delete({ count: 'exact' })
-        .in('import_id', importIds)
+        .delete()
+        .eq('advertiser_id', account.advertiser_id)
 
       if (campaignsError) {
         console.error('Erro ao deletar campanhas:', campaignsError)
-      } else {
-        console.log(`Campanhas deletadas: ${deletedCampaigns}`)
       }
 
-      // 3. Deletar importações do usuário
-      const { error: importsError, count: deletedImports } = await supabase
+      // Importações desta conta
+      const { error: importsError } = await supabase
         .from('imports')
-        .delete({ count: 'exact' })
+        .delete()
         .eq('user_id', user.id)
+        .eq('advertiser_id', account.advertiser_id)
 
       if (importsError) {
         console.error('Erro ao deletar importações:', importsError)
-      } else {
-        console.log(`Importações deletadas: ${deletedImports}`)
+      }
+    } else {
+      // Fallback: sem advertiser_id (dados antigos) — buscar imports do user e deletar campanhas desses imports
+      const { data: userImports } = await supabase
+        .from('imports')
+        .select('id')
+        .eq('user_id', user.id)
+
+      if (userImports?.length) {
+        const importIds = userImports.map(i => i.id)
+        await supabase.from('campaigns').delete().in('import_id', importIds)
+        await supabase.from('imports').delete().eq('user_id', user.id)
       }
     }
 
@@ -201,7 +197,7 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// PATCH - Ativar conta (e limpar dados da conta anterior)
+// PATCH - Ativar conta (dados são separados por advertiser_id, não limpa ao trocar)
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -217,42 +213,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'ID da conta é obrigatório' }, { status: 400 })
     }
 
-    // Limpar dados da sincronização anterior
     console.log('=== TROCANDO CONTA ATIVA ===')
-    
-    // Buscar importações do usuário
-    const { data: userImports } = await supabase
-      .from('imports')
-      .select('id')
-      .eq('user_id', user.id)
-
-    if (userImports && userImports.length > 0) {
-      const importIds = userImports.map(i => i.id)
-      
-      // Deletar campanhas
-      const { error: campaignsError } = await supabase
-        .from('campaigns')
-        .delete()
-        .in('import_id', importIds)
-
-      if (campaignsError) {
-        console.error('Erro ao deletar campanhas:', campaignsError)
-      } else {
-        console.log('Campanhas deletadas')
-      }
-
-      // Deletar importações
-      const { error: importsError } = await supabase
-        .from('imports')
-        .delete()
-        .eq('user_id', user.id)
-
-      if (importsError) {
-        console.error('Erro ao deletar importações:', importsError)
-      } else {
-        console.log('Importações deletadas')
-      }
-    }
     
     // Primeiro, desativar todas as contas do usuário
     await supabase

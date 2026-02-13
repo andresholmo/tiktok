@@ -110,10 +110,10 @@ export async function POST(request: NextRequest) {
 
     const importIds = imports.map(i => i.id)
 
-    // Atualizar campanhas no banco (apenas campos de orçamento e status)
+    // Atualizar campanhas no banco (apenas campos de orçamento e status), filtradas por conta
     let updatedCount = 0
     for (const camp of campaigns) {
-      const { error } = await supabase
+      let updateQuery = supabase
         .from('campaigns')
         .update({
           orcamento_diario: camp.orcamento_diario,
@@ -122,6 +122,10 @@ export async function POST(request: NextRequest) {
         })
         .eq('tiktok_campaign_id', camp.campaign_id)
         .in('import_id', importIds)
+      if (advertiserId != null && advertiserId !== '') {
+        updateQuery = updateQuery.eq('advertiser_id', advertiserId)
+      }
+      const { error } = await updateQuery
 
       if (!error) {
         updatedCount++

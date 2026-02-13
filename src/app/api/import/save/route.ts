@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getActiveAdvertiserId } from '@/lib/tiktok-accounts'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,6 +68,9 @@ export async function POST(request: NextRequest) {
     // Usar userId do body se fornecido (para cron), senão usar da sessão
     const finalUserId = data.userId || userId
 
+    // Advertiser da conta TikTok ativa (para múltiplas contas)
+    const advertiserId = await getActiveAdvertiserId(supabase, finalUserId)
+
     // Calcular ROI geral
     const totalSpend = tiktok.totalSpend || 0
     // gam.totalRevenue = soma das campanhas rastreadas (GUP-01)
@@ -118,6 +122,7 @@ export async function POST(request: NextRequest) {
       }
       
       campaignDataList.push({
+        advertiser_id: advertiserId ?? undefined,
         campaign_name: tiktokCampaign.campanha,
         campanha: tiktokCampaign.campanha, // Manter compatibilidade
         campaign_date: new Date(startDate).toISOString().split('T')[0],
@@ -158,6 +163,7 @@ export async function POST(request: NextRequest) {
     // Adicionar campanhas GAM que não têm correspondência no TikTok
     for (const [, gamCampaign] of gamMap) {
       campaignDataList.push({
+        advertiser_id: advertiserId ?? undefined,
         campaign_name: gamCampaign.campanha,
         campanha: gamCampaign.campanha, // Manter compatibilidade
         campaign_date: new Date(startDate).toISOString().split('T')[0],
@@ -187,17 +193,22 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Verificar se já existe importação para esse período
+    // Verificar se já existe importação para esse período e conta (advertiser_id)
     // Usar date (coluna antiga) se start_date/end_date não existirem
     let existingImport
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('imports')
         .select('id')
         .eq('user_id', finalUserId)
         .eq('start_date', startDate)
         .eq('end_date', endDate)
-        .maybeSingle()
+      if (advertiserId != null && advertiserId !== '') {
+        query = query.eq('advertiser_id', advertiserId)
+      } else {
+        query = query.is('advertiser_id', null)
+      }
+      const { data, error } = await query.maybeSingle()
       
       if (error && error.message?.includes('column') && error.message?.includes('does not exist')) {
         // Se as colunas não existem, usar a coluna date antiga
@@ -248,6 +259,7 @@ export async function POST(request: NextRequest) {
 
       // Adicionar colunas novas apenas se existirem (será ignorado se não existir)
       try {
+        updateData.advertiser_id = advertiserId ?? null
         updateData.start_date = startDate
         updateData.end_date = endDate
         updateData.tiktok_spend = totalSpend
@@ -318,6 +330,7 @@ export async function POST(request: NextRequest) {
 
       // Adicionar colunas novas se existirem
       try {
+        insertData.advertiser_id = advertiserId ?? null
         insertData.start_date = startDate
         insertData.end_date = endDate
         insertData.tiktok_spend = totalSpend

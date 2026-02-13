@@ -1,6 +1,7 @@
 export interface Import {
   id: string
   user_id: string
+  advertiser_id?: string
   date: string
   created_at: string
   
@@ -39,6 +40,7 @@ export interface Import {
 export interface Campaign {
   id: string
   import_id: string
+  advertiser_id?: string
   campanha: string
   status: 'ATIVO' | 'PAUSADO' | 'SEM DADOS' | 'ENABLE' | 'DISABLE' | string
   

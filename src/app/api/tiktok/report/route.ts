@@ -33,8 +33,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
     }
 
-    // Buscar advertiser_id da conta ativa
-    const advertiserId = await getActiveAdvertiserId(supabase, finalUserId)
+    // Advertiser: header (sync consolidado) ou conta ativa
+    const specificAdvertiserId = request.headers.get('x-advertiser-id')
+    const advertiserId = specificAdvertiserId
+      ? specificAdvertiserId
+      : await getActiveAdvertiserId(supabase, finalUserId)
     if (!advertiserId) {
       return NextResponse.json({ 
         error: 'Nenhuma conta TikTok configurada. Vá em Configurações para adicionar.' 

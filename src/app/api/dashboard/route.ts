@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getActiveAdvertiserId } from '@/lib/tiktok-accounts'
-
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
@@ -21,22 +19,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Datas obrigatórias' }, { status: 400 })
     }
 
-    // Conta TikTok ativa (múltiplas contas)
-    const advertiserId = await getActiveAdvertiserId(supabase, user.id)
-
-    // Buscar importações do período e da conta ativa
-    let importsQuery = supabase
+    // Visão consolidada: buscar TODOS os imports do usuário no período (todas as contas)
+    const { data: imports, error: importsError } = await supabase
       .from('imports')
       .select('*')
       .eq('user_id', user.id)
       .gte('start_date', startDate)
       .lte('end_date', endDate)
-    if (advertiserId != null && advertiserId !== '') {
-      importsQuery = importsQuery.eq('advertiser_id', advertiserId)
-    } else {
-      importsQuery = importsQuery.is('advertiser_id', null)
-    }
-    const { data: imports, error: importsError } = await importsQuery
       .order('start_date', { ascending: false })
 
     if (importsError) {
@@ -134,7 +123,9 @@ export async function GET(request: NextRequest) {
         existing.gam_impressions = (existing.gam_impressions || 0) + (Number(camp.gam_impressions ?? 0) || 0)
         existing.gam_clicks = (existing.gam_clicks || 0) + (Number(camp.gam_clicks ?? 0) || 0)
         existing.conversions = (existing.conversions || 0) + (Number(camp.conversions ?? 0) || 0)
-        // Preservar is_smart_plus (usar o primeiro valor encontrado)
+        if (!existing.advertiser_id && camp.advertiser_id) {
+          existing.advertiser_id = camp.advertiser_id
+        }
         if (!existing.is_smart_plus && camp.is_smart_plus) {
           existing.is_smart_plus = camp.is_smart_plus
         }

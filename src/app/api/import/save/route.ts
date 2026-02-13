@@ -68,8 +68,10 @@ export async function POST(request: NextRequest) {
     // Usar userId do body se fornecido (para cron), senão usar da sessão
     const finalUserId = data.userId || userId
 
-    // Advertiser da conta TikTok ativa (para múltiplas contas)
-    const advertiserId = await getActiveAdvertiserId(supabase, finalUserId)
+    // Advertiser: header/body (sync consolidado) ou conta ativa
+    const headerAdvertiserId = request.headers.get('x-advertiser-id')
+    const bodyAdvertiserId = (data as { advertiserId?: string }).advertiserId
+    const advertiserId = headerAdvertiserId ?? bodyAdvertiserId ?? await getActiveAdvertiserId(supabase, finalUserId)
 
     // Calcular ROI geral
     const totalSpend = tiktok.totalSpend || 0

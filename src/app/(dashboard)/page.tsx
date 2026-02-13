@@ -276,25 +276,20 @@ export default function DashboardPage() {
     }
   }, [data?.campaigns])
 
-  // Função de sincronizar
+  // Sincronizar TODAS as contas TikTok
   const handleSync = async () => {
     setSyncing(true)
-    
     try {
-      // 1. Buscar TikTok
-      toast.info('Buscando dados do TikTok...')
-      const tiktokResponse = await fetch('/api/tiktok/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate }),
-      })
-      const tiktokData = await tiktokResponse.json()
-      
-      if (!tiktokData.success && !tiktokData.campaigns) {
-        throw new Error(tiktokData.error || 'Erro ao buscar TikTok')
+      const accountsResponse = await fetch('/api/tiktok/accounts')
+      const accountsData = await accountsResponse.json()
+      if (!accountsData.accounts || accountsData.accounts.length === 0) {
+        toast.error('Nenhuma conta TikTok conectada')
+        return
       }
+      const accounts = accountsData.accounts
+      toast.info(`Sincronizando ${accounts.length} conta(s)...`)
 
-      // 2. Buscar GAM Campanhas
+      // GAM uma vez (compartilhado entre contas)
       toast.info('Buscando campanhas do GAM...')
       const gamResponse = await fetch('/api/gam/report', {
         method: 'POST',
@@ -302,12 +297,9 @@ export default function DashboardPage() {
         body: JSON.stringify({ startDate, endDate }),
       })
       const gamData = await gamResponse.json()
-
       if (!gamData.success) {
         throw new Error(gamData.error || 'Erro ao buscar GAM')
       }
-
-      // 3. Buscar GAM Faturamento Total
       toast.info('Buscando faturamento total...')
       const faturamentoResponse = await fetch('/api/gam/faturamento', {
         method: 'POST',
@@ -316,50 +308,75 @@ export default function DashboardPage() {
       })
       const faturamentoData = await faturamentoResponse.json()
 
-      // 4. Salvar no banco
-      toast.info('Salvando dados...')
-      
-      const tiktokCampaigns = tiktokData.campaigns || []
-      const totalTiktokSpend = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.gasto ?? 0), 0)
-      const totalTiktokImpressions = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.impressoes ?? 0), 0)
-      const totalTiktokClicks = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.cliques ?? 0), 0)
+      let totalCampaigns = 0
+      const errors: string[] = []
 
-      const saveResponse = await fetch('/api/import/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate,
-          endDate,
-          tiktok: {
-            campaigns: tiktokCampaigns,
-            totalSpend: totalTiktokSpend,
-            totalImpressions: totalTiktokImpressions,
-            totalClicks: totalTiktokClicks,
-          },
-          gam: {
-            campaigns: gamData.campaigns || [],
-            totalRevenue: gamData.totalReceita || 0,
-            faturamentoTotal: faturamentoData.success ? faturamentoData.faturamentoTikTok : 0,
-            totalImpressions: gamData.totalImpressoes || 0,
-            totalClicks: gamData.totalCliques || 0,
-          },
-        }),
-      })
+      for (const account of accounts) {
+        try {
+          toast.info(`Sincronizando: ${account.name || account.advertiser_id}...`)
+          const tiktokResponse = await fetch('/api/tiktok/report', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-advertiser-id': account.advertiser_id,
+            },
+            body: JSON.stringify({ startDate, endDate }),
+          })
+          const tiktokData = await tiktokResponse.json()
+          const tiktokCampaigns = tiktokData.campaigns || []
+          if (!tiktokData.success && tiktokCampaigns.length === 0 && tiktokData.error) {
+            errors.push(`${account.name || account.advertiser_id}: ${tiktokData.error}`)
+            continue
+          }
 
-      const saveResult = await saveResponse.json()
+          const totalSpend = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.gasto ?? 0), 0)
+          const totalImpressions = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.impressoes ?? 0), 0)
+          const totalClicks = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.cliques ?? 0), 0)
 
-      if (!saveResult.success) {
-        throw new Error(saveResult.error || 'Erro ao salvar')
+          const saveResponse = await fetch('/api/import/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-advertiser-id': account.advertiser_id,
+            },
+            body: JSON.stringify({
+              startDate,
+              endDate,
+              advertiserId: account.advertiser_id,
+              tiktok: {
+                campaigns: tiktokCampaigns,
+                totalSpend,
+                totalImpressions,
+                totalClicks,
+              },
+              gam: {
+                campaigns: gamData.campaigns || gamData.finalCampaigns || [],
+                totalRevenue: gamData.totalReceita || 0,
+                faturamentoTotal: faturamentoData.success ? faturamentoData.faturamentoTikTok : 0,
+                totalImpressions: gamData.totalImpressoes || 0,
+                totalClicks: gamData.totalCliques || 0,
+              },
+            }),
+          })
+          const saveResult = await saveResponse.json()
+          if (saveResult.success) {
+            totalCampaigns += tiktokCampaigns.length
+          } else {
+            errors.push(`${account.name || account.advertiser_id}: ${saveResult.error}`)
+          }
+        } catch (err: any) {
+          errors.push(`${account.name || account.advertiser_id}: ${err.message}`)
+        }
       }
 
-      toast.success(`Sincronizado! ROI: ${(saveResult.summary?.roiRastreado ?? saveResult.summary?.roiTracked ?? 0).toFixed(2)}%`)
-      
-      // Atualizar horário imediatamente (sem esperar fetch)
+      if (errors.length > 0) {
+        toast.warning(`Sincronizado com ${errors.length} erro(s)`)
+        console.error('Erros:', errors)
+      } else {
+        toast.success(`Sincronizado! ${totalCampaigns} campanhas de ${accounts.length} conta(s)`)
+      }
       setLastSyncAt(new Date().toISOString())
-      
-      // Recarregar dados do dashboard
       await fetchData(startDate, endDate)
-
     } catch (err: any) {
       toast.error(err.message)
     } finally {

@@ -84,120 +84,128 @@ export async function GET(request: NextRequest) {
     
     console.log(`CRON: Sincronizando data ${syncDate}`)
 
-    const results = []
+    const results: { userId: string; success: boolean; campaigns?: number; accounts?: number; roi?: number; error?: string }[] = []
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-    // Sincronizar para cada usuário
     for (const cred of credentials) {
-      console.log(`CRON: Processando usuário ${cred.user_id}`)
-      
-      try {
-        // 1. Buscar TikTok
-        console.log(`CRON: Buscando TikTok para ${cred.user_id}...`)
-        const tiktokResponse = await fetch(`${baseUrl}/api/tiktok/report`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': cred.user_id,
-          },
-          body: JSON.stringify({ 
-            startDate: syncDate, 
-            endDate: syncDate,
-            userId: cred.user_id,
-          }),
-        })
-        const tiktokData = await tiktokResponse.json()
-        console.log('CRON: TikTok response:', tiktokData.success, tiktokData.campaigns?.length || 0, 'campanhas')
-        
-        if (!tiktokData.success && !tiktokData.campaigns) {
-          throw new Error(tiktokData.error || 'Erro ao buscar TikTok')
-        }
+      const userId = cred.user_id
+      console.log(`CRON: Processando usuário ${userId}`)
 
-        // 2. Buscar GAM
-        console.log(`CRON: Buscando GAM para ${cred.user_id}...`)
+      const { data: userAccounts } = await supabase
+        .from('tiktok_accounts')
+        .select('id, advertiser_id, name')
+        .eq('user_id', userId)
+
+      const accounts = userAccounts && userAccounts.length > 0
+        ? userAccounts
+        : (cred.advertiser_id ? [{ advertiser_id: cred.advertiser_id, name: 'Conta principal' }] : [])
+
+      if (!accounts || accounts.length === 0) {
+        console.log(`CRON: Usuário ${userId} sem contas TikTok`)
+        results.push({ userId, success: false, error: 'Nenhuma conta TikTok' })
+        continue
+      }
+
+      try {
+        let gamData: any
+        let faturamentoData: any
+
         const gamResponse = await fetch(`${baseUrl}/api/gam/report`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ startDate: syncDate, endDate: syncDate }),
         })
-        const gamData = await gamResponse.json()
-        console.log('CRON: GAM response:', gamData.success)
+        gamData = await gamResponse.json()
 
-        // 3. Buscar Faturamento
-        console.log(`CRON: Buscando faturamento para ${cred.user_id}...`)
         const faturamentoResponse = await fetch(`${baseUrl}/api/gam/faturamento`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ startDate: syncDate, endDate: syncDate }),
         })
-        const faturamentoData = await faturamentoResponse.json()
-        console.log('CRON: Faturamento response:', faturamentoData.success)
+        faturamentoData = await faturamentoResponse.json()
 
-        // 4. Salvar
-        console.log(`CRON: Salvando dados para ${cred.user_id}...`)
-        const tiktokCampaigns = tiktokData.campaigns || []
-        const totalTiktokSpend = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.gasto || 0), 0)
-        const totalTiktokImpressions = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.impressoes || 0), 0)
-        const totalTiktokClicks = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.cliques || 0), 0)
+        let totalCampaigns = 0
+        for (const account of accounts) {
+          const advertiserId = account.advertiser_id
+          if (!advertiserId) continue
 
-        const saveResponse = await fetch(`${baseUrl}/api/import/save`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': cred.user_id,
-            'x-sync-type': 'cron',
-          },
-          body: JSON.stringify({
-            startDate: syncDate,
-            endDate: syncDate,
-            userId: cred.user_id,
-            tiktok: {
-              campaigns: tiktokCampaigns,
-              totalSpend: totalTiktokSpend,
-              totalImpressions: totalTiktokImpressions,
-              totalClicks: totalTiktokClicks,
+          const tiktokResponse = await fetch(`${baseUrl}/api/tiktok/report`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-user-id': userId,
+              'x-advertiser-id': advertiserId,
             },
-            gam: {
-              campaigns: gamData.finalCampaigns || gamData.campaigns || [],
-              totalRevenue: gamData.totalReceita || 0,
-              faturamentoTotal: faturamentoData.success ? faturamentoData.faturamentoTikTok : 0,
-              totalImpressions: gamData.totalImpressoes || 0,
-              totalClicks: gamData.totalCliques || 0,
-            },
-          }),
-        })
-        const saveResult = await saveResponse.json()
-        console.log('CRON: Save response:', saveResult.success)
+            body: JSON.stringify({
+              startDate: syncDate,
+              endDate: syncDate,
+              userId,
+            }),
+          })
+          const tiktokData = await tiktokResponse.json()
+          const tiktokCampaigns = tiktokData.campaigns || []
+          if (!tiktokData.success && tiktokCampaigns.length === 0 && tiktokData.error) {
+            console.error(`CRON: TikTok erro conta ${advertiserId}:`, tiktokData.error)
+            continue
+          }
 
-        if (!saveResult.success) {
-          throw new Error(saveResult.error || 'Erro ao salvar')
+          const totalTiktokSpend = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.gasto || 0), 0)
+          const totalTiktokImpressions = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.impressoes || 0), 0)
+          const totalTiktokClicks = tiktokCampaigns.reduce((sum: number, c: any) => sum + (c.cliques || 0), 0)
+
+          const saveResponse = await fetch(`${baseUrl}/api/import/save`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-user-id': userId,
+              'x-advertiser-id': advertiserId,
+              'x-sync-type': 'cron',
+            },
+            body: JSON.stringify({
+              startDate: syncDate,
+              endDate: syncDate,
+              userId,
+              advertiserId,
+              tiktok: {
+                campaigns: tiktokCampaigns,
+                totalSpend: totalTiktokSpend,
+                totalImpressions: totalTiktokImpressions,
+                totalClicks: totalTiktokClicks,
+              },
+              gam: {
+                campaigns: gamData?.finalCampaigns || gamData?.campaigns || [],
+                totalRevenue: gamData?.totalReceita || 0,
+                faturamentoTotal: faturamentoData?.success ? faturamentoData.faturamentoTikTok : 0,
+                totalImpressions: gamData?.totalImpressoes || 0,
+                totalClicks: gamData?.totalCliques || 0,
+              },
+            }),
+          })
+          const saveResult = await saveResponse.json()
+          if (saveResult.success) {
+            totalCampaigns += tiktokCampaigns.length
+          }
         }
 
-        // 5. Atualizar sync_status
         await supabase
           .from('sync_status')
           .upsert({
-            user_id: cred.user_id,
+            user_id: userId,
             last_sync_at: new Date().toISOString(),
             sync_type: 'cron',
             status: 'success',
           }, { onConflict: 'user_id' })
 
         results.push({
-          userId: cred.user_id,
+          userId,
           success: true,
-          campaigns: tiktokCampaigns.length,
-          roi: saveResult.summary?.roiRastreado || saveResult.summary?.roi,
+          campaigns: totalCampaigns,
+          accounts: accounts.length,
         })
-        
       } catch (err: any) {
-        console.error(`CRON: Erro usuário ${cred.user_id}:`, err.message)
-        results.push({
-          userId: cred.user_id,
-          success: false,
-          error: err.message,
-        })
+        console.error(`CRON: Erro usuário ${userId}:`, err.message)
+        results.push({ userId, success: false, error: err.message })
       }
     }
 

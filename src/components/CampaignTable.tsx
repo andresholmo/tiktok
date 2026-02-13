@@ -223,6 +223,7 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
               </TableHead>
               <SortableHeader field="status">STATUS</SortableHeader>
               <SortableHeader field="campanha">CAMPANHA</SortableHeader>
+              <TableHead className="text-center text-white text-xs">CONTA</TableHead>
               <SortableHeader field="roi" className="text-right">ROI</SortableHeader>
               <SortableHeader field="gasto" className="text-right">GASTO</SortableHeader>
               <SortableHeader field="ganho" className="text-right">GANHO</SortableHeader>
@@ -238,7 +239,7 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
           <TableBody>
             {sortedCampaigns.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                   Nenhuma campanha encontrada
                 </TableCell>
               </TableRow>
@@ -296,6 +297,9 @@ export function CampaignTable({ campaigns, onRefresh, onSelectionChange }: Campa
                           <Copy className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground" title={campaign.advertiser_id || undefined}>
+                      {campaign.advertiser_id ? campaign.advertiser_id.slice(-4) : '—'}
                     </TableCell>
                     <TableCell className={`text-center ${getROIColor(campaign.roi ?? 0)}`}>
                       {formatPercentSafe(campaign.roi)}

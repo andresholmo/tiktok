@@ -6,8 +6,6 @@ import { BarChart3, Settings, History, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
-import { AccountSelector } from '@/components/AccountSelector'
-
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -64,7 +62,6 @@ export function Navbar() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <AccountSelector />
             {userEmail && (
               <span className="hidden md:flex items-center gap-2 text-sm text-gray-600">
                 <User className="h-4 w-4" />

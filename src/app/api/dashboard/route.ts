@@ -19,10 +19,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Datas obrigatórias' }, { status: 400 })
     }
 
-    // Visão consolidada: buscar TODOS os imports do usuário no período (todas as contas)
+    console.log('=== DASHBOARD: Buscando dados ===')
+    console.log('User ID:', user.id)
+    console.log('Período:', startDate, 'a', endDate)
+
+    // Buscar TODOS os imports do usuário (SEM filtro de advertiser_id)
     const { data: imports, error: importsError } = await supabase
       .from('imports')
-      .select('*')
+      .select('id, advertiser_id, start_date, end_date, tiktok_spend, total_gasto, gam_revenue, total_ganho, gam_faturamento_total, faturamento_tiktok, tiktok_impressions, tiktok_clicks, gam_impressions, gam_clicks')
       .eq('user_id', user.id)
       .gte('start_date', startDate)
       .lte('end_date', endDate)
@@ -32,6 +36,10 @@ export async function GET(request: NextRequest) {
       console.error('Erro ao buscar imports:', importsError)
       return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 })
     }
+
+    console.log('Imports encontrados:', imports?.length || 0)
+    const uniqueAdvertiserIds = [...new Set((imports || []).map(i => i.advertiser_id).filter(Boolean))]
+    console.log('Advertiser IDs únicos nos imports:', uniqueAdvertiserIds.length, uniqueAdvertiserIds.slice(0, 5))
 
     if (!imports || imports.length === 0) {
       return NextResponse.json({
@@ -55,24 +63,19 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Buscar campanhas do período
     const importIds = imports.map(i => i.id)
+    console.log('Total de import IDs:', importIds.length)
+
+    // Buscar TODAS as campanhas de TODOS os imports (todas as contas)
     const { data: campaigns, error: campaignsError } = await supabase
       .from('campaigns')
       .select('*, is_smart_plus')
       .in('import_id', importIds)
-    
-    // DEBUG: Verificar se is_smart_plus está vindo do banco
-    console.log('=== DEBUG: Campanhas do banco (primeiras 3) ===')
-    if (campaigns && campaigns.length > 0) {
-      console.log(campaigns.slice(0, 3).map(c => ({ 
-        nome: c.campaign_name || c.campanha, 
-        is_smart_plus: c.is_smart_plus 
-      })))
-    }
 
+    console.log('Campanhas encontradas no banco:', campaigns?.length || 0)
     if (campaignsError) {
       console.error('Erro ao buscar campanhas:', campaignsError)
+      return NextResponse.json({ error: 'Erro ao buscar campanhas' }, { status: 500 })
     }
 
     // Agregar totais do período
@@ -107,15 +110,16 @@ export async function GET(request: NextRequest) {
       ? ((totals.gamFaturamentoTotal - totals.tiktokSpend) / totals.tiktokSpend) * 100 
       : 0
 
-    // Agregar campanhas por nome (somar valores de múltiplos dias)
+    // Agregar por (nome + advertiser_id) para manter campanhas de contas diferentes separadas
     const campaignMap = new Map<string, any>()
     
     for (const camp of campaigns || []) {
       const name = camp.campaign_name || camp.campanha
       if (!name) continue
+      const aggKey = `${name}__${camp.advertiser_id ?? ''}`
       
-      if (campaignMap.has(name)) {
-        const existing = campaignMap.get(name)
+      if (campaignMap.has(aggKey)) {
+        const existing = campaignMap.get(aggKey)
         existing.tiktok_spend = (existing.tiktok_spend || 0) + (Number(camp.tiktok_spend ?? camp.gasto ?? 0) || 0)
         existing.gam_revenue = (existing.gam_revenue || 0) + (Number(camp.gam_revenue ?? camp.ganho ?? 0) || 0)
         existing.tiktok_impressions = (existing.tiktok_impressions || 0) + (Number(camp.tiktok_impressions ?? 0) || 0)
@@ -137,10 +141,10 @@ export async function GET(request: NextRequest) {
           existing.conversion_rate = camp.conversion_rate
         }
       } else {
-        campaignMap.set(name, { 
+        campaignMap.set(aggKey, { 
           ...camp,
-          campanha: name, // Garantir compatibilidade
-          is_smart_plus: Boolean(camp.is_smart_plus), // Garantir que existe
+          campanha: name,
+          is_smart_plus: Boolean(camp.is_smart_plus),
         })
       }
     }
@@ -192,15 +196,11 @@ export async function GET(request: NextRequest) {
       .map(c => ({
         ...c,
         campanha: c.campaign_name || c.campanha,
-        is_smart_plus: Boolean(c.is_smart_plus), // Forçar campo
+        is_smart_plus: Boolean(c.is_smart_plus),
       }))
-    
-    // DEBUG: Verificar campanhas finais
-    console.log('=== DEBUG: Campanhas filtradas (primeiras 3) ===')
-    console.log(validCampaigns.slice(0, 3).map(c => ({ 
-      nome: c.campanha, 
-      is_smart_plus: c.is_smart_plus 
-    })))
+
+    console.log('Campanhas agregadas:', campaignMap.size)
+    console.log('Campanhas após filtrar SEM DADOS:', validCampaigns.length)
 
     return NextResponse.json({
       success: true,

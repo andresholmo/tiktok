@@ -92,22 +92,27 @@ export async function GET(request: NextRequest) {
     for (const imp of imports) {
       totals.tiktokSpend += Number(imp.tiktok_spend ?? imp.total_gasto ?? 0)
       totals.gamRevenue += Number(imp.gam_revenue ?? imp.total_ganho ?? 0)
-      totals.gamFaturamentoTotal += Number(imp.gam_faturamento_total ?? imp.faturamento_tiktok ?? 0)
       totals.tiktokImpressions += Number(imp.tiktok_impressions ?? 0)
       totals.tiktokClicks += Number(imp.tiktok_clicks ?? 0)
       totals.gamImpressions += Number(imp.gam_impressions ?? 0)
       totals.gamClicks += Number(imp.gam_clicks ?? 0)
     }
 
+    // Faturamento GAM é um valor por período (mesmo para todas as contas) — usar o primeiro import
+    const gamFaturamentoTotal = imports.length > 0
+      ? Number(imports[0].gam_faturamento_total ?? imports[0].faturamento_tiktok ?? 0)
+      : 0
+    totals.gamFaturamentoTotal = gamFaturamentoTotal
+
     // Calcular métricas
     const lucroRastreado = totals.gamRevenue - totals.tiktokSpend
-    const roiRastreado = totals.tiktokSpend > 0 
-      ? ((totals.gamRevenue - totals.tiktokSpend) / totals.tiktokSpend) * 100 
+    const roiRastreado = totals.tiktokSpend > 0
+      ? ((totals.gamRevenue - totals.tiktokSpend) / totals.tiktokSpend) * 100
       : 0
 
-    const lucroReal = totals.gamFaturamentoTotal - totals.tiktokSpend
-    const roiReal = totals.tiktokSpend > 0 
-      ? ((totals.gamFaturamentoTotal - totals.tiktokSpend) / totals.tiktokSpend) * 100 
+    const lucroReal = gamFaturamentoTotal - totals.tiktokSpend
+    const roiReal = totals.tiktokSpend > 0
+      ? ((gamFaturamentoTotal - totals.tiktokSpend) / totals.tiktokSpend) * 100
       : 0
 
     // Agregar por (nome + advertiser_id) para manter campanhas de contas diferentes separadas

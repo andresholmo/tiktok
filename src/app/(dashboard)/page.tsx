@@ -352,7 +352,7 @@ export default function DashboardPage() {
               gam: {
                 campaigns: gamData.campaigns || gamData.finalCampaigns || [],
                 totalRevenue: gamData.totalReceita || 0,
-                faturamentoTotal: faturamentoData.success ? faturamentoData.faturamentoTikTok : 0,
+                faturamentoTotal: faturamentoData.faturamentoTikTok ?? 0,
                 totalImpressions: gamData.totalImpressoes || 0,
                 totalClicks: gamData.totalCliques || 0,
               },
@@ -432,8 +432,8 @@ export default function DashboardPage() {
           {/* Cards - Linha 1 usa totais FILTRADOS, Linha 2 usa totais GERAIS */}
           <SummaryCards
             faturamentoTiktok={data.totals?.gamFaturamentoTotal ?? 0}
-            lucroReal={data.totals?.lucroReal ?? ((data.totals?.gamFaturamentoTotal ?? 0) - (data.totals?.tiktokSpend ?? 0))}
-            roiReal={data.totals?.roiReal ?? ((data.totals?.tiktokSpend ?? 0) > 0 ? (((data.totals?.gamFaturamentoTotal ?? 0) - (data.totals?.tiktokSpend ?? 0)) / (data.totals?.tiktokSpend ?? 1)) * 100 : 0)}
+            lucroReal={data.totals?.lucroReal ?? 0}
+            roiReal={data.totals?.roiReal ?? 0}
             totalGasto={displayTotals.totalGasto}
             totalGanho={displayTotals.totalGanho}
             totalLucro={displayTotals.totalLucro}

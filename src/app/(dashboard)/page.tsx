@@ -431,6 +431,9 @@ export default function DashboardPage() {
         <>
           {/* Cards - Linha 1 usa totais FILTRADOS, Linha 2 usa totais GERAIS */}
           <SummaryCards
+            faturamentoTiktok={data.totals?.gamFaturamentoTotal ?? 0}
+            lucroReal={data.totals?.lucroReal ?? ((data.totals?.gamFaturamentoTotal ?? 0) - (data.totals?.tiktokSpend ?? 0))}
+            roiReal={data.totals?.roiReal ?? ((data.totals?.tiktokSpend ?? 0) > 0 ? (((data.totals?.gamFaturamentoTotal ?? 0) - (data.totals?.tiktokSpend ?? 0)) / (data.totals?.tiktokSpend ?? 1)) * 100 : 0)}
             totalGasto={displayTotals.totalGasto}
             totalGanho={displayTotals.totalGanho}
             totalLucro={displayTotals.totalLucro}

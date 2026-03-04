@@ -1,88 +1,148 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getActiveAdvertiserId, getTikTokAccessToken } from '@/lib/tiktok-accounts'
+import { getTikTokAccessToken } from '@/lib/tiktok-accounts'
 
 export const dynamic = 'force-dynamic'
-
-interface UpdateStatusRequest {
-  campaignIds: string[]
-  status: 'ENABLE' | 'DISABLE'
-}
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { campaignIds, status }: UpdateStatusRequest = await request.json()
+    const { campaignIds, status } = await request.json()
 
-    if (!campaignIds || campaignIds.length === 0) {
-      return NextResponse.json({ error: 'Nenhuma campanha selecionada' }, { status: 400 })
+    if (!campaignIds || !Array.isArray(campaignIds) || campaignIds.length === 0) {
+      return NextResponse.json({ error: 'IDs de campanha obrigatórios' }, { status: 400 })
     }
 
-    if (!['ENABLE', 'DISABLE'].includes(status)) {
+    if (!status || !['ENABLE', 'DISABLE'].includes(status)) {
       return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
     }
 
-    // Buscar access token e advertiser_id da conta ativa
     const accessToken = await getTikTokAccessToken(supabase, user.id)
     if (!accessToken) {
-      return NextResponse.json({ error: 'TikTok não conectado' }, { status: 400 })
+      return NextResponse.json({ error: 'Nenhuma conta TikTok conectada' }, { status: 400 })
     }
 
-    const advertiserId = await getActiveAdvertiserId(supabase, user.id)
-    if (!advertiserId) {
-      return NextResponse.json({ 
-        error: 'Nenhuma conta TikTok configurada. Vá em Configurações para adicionar.' 
-      }, { status: 400 })
+    // Buscar contas do usuário (para validar advertiser_id)
+    const { data: accounts } = await supabase
+      .from('tiktok_accounts')
+      .select('advertiser_id')
+      .eq('user_id', user.id)
+
+    if (!accounts || accounts.length === 0) {
+      return NextResponse.json({ error: 'Nenhuma conta TikTok conectada' }, { status: 400 })
     }
 
-    // Chamar API do TikTok para atualizar status
-    const response = await fetch(
-      'https://business-api.tiktok.com/open_api/v1.3/campaign/status/update/',
-      {
-        method: 'POST',
-        headers: {
-          'Access-Token': accessToken,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          advertiser_id: advertiserId,
-          campaign_ids: campaignIds,
-          operation_status: status,
-        }),
+    const accountIds = new Set((accounts || []).map((a) => a.advertiser_id).filter(Boolean))
+
+    // Buscar o advertiser_id de cada campanha no banco
+    const { data: campaigns } = await supabase
+      .from('campaigns')
+      .select('tiktok_campaign_id, advertiser_id')
+      .in('tiktok_campaign_id', campaignIds)
+
+    // Agrupar campanhas por advertiser_id
+    const campaignsByAdvertiser = new Map<string, string[]>()
+
+    for (const campaignId of campaignIds) {
+      const campaign = campaigns?.find((c) => c.tiktok_campaign_id === campaignId)
+      const advertiserId = campaign?.advertiser_id
+
+      if (advertiserId && accountIds.has(advertiserId)) {
+        if (!campaignsByAdvertiser.has(advertiserId)) {
+          campaignsByAdvertiser.set(advertiserId, [])
+        }
+        campaignsByAdvertiser.get(advertiserId)!.push(campaignId)
+      } else if (!advertiserId) {
+        console.warn(`Campanha ${campaignId} não tem advertiser_id no banco`)
       }
-    )
+    }
 
-    const data = await response.json()
-
-    if (data.code !== 0) {
-      console.error('Erro TikTok API:', data)
-      return NextResponse.json({ 
-        error: data.message || 'Erro ao atualizar status',
-        details: data 
+    if (campaignsByAdvertiser.size === 0) {
+      return NextResponse.json({
+        error: 'Nenhuma campanha encontrada com advertiser_id válido. Sincronize os dados primeiro.',
       }, { status: 400 })
     }
 
-    console.log(`Campanhas atualizadas para ${status}:`, campaignIds)
+    const results: { advertiserId: string; campaignIds: string[]; success: boolean }[] = []
+    const errors: { advertiserId: string; campaignIds: string[]; error: string; code?: number }[] = []
+
+    for (const [advertiserId, campaignIdsForAccount] of campaignsByAdvertiser) {
+      try {
+        const response = await fetch(
+          'https://business-api.tiktok.com/open_api/v1.3/campaign/status/update/',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Token': accessToken,
+            },
+            body: JSON.stringify({
+              advertiser_id: advertiserId,
+              campaign_ids: campaignIdsForAccount,
+              operation_status: status,
+            }),
+          }
+        )
+
+        const data = await response.json()
+
+        if (data.code === 0) {
+          results.push({
+            advertiserId,
+            campaignIds: campaignIdsForAccount,
+            success: true,
+          })
+        } else {
+          errors.push({
+            advertiserId,
+            campaignIds: campaignIdsForAccount,
+            error: data.message,
+            code: data.code,
+          })
+        }
+      } catch (err: unknown) {
+        errors.push({
+          advertiserId,
+          campaignIds: campaignIdsForAccount,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+
+    if (errors.length > 0 && results.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: errors[0].error,
+        errors,
+      }, { status: 400 })
+    }
+
+    if (errors.length > 0 && results.length > 0) {
+      return NextResponse.json({
+        success: true,
+        partial: true,
+        message: `${results.length} conta(s) atualizadas com sucesso, ${errors.length} erro(s)`,
+        results,
+        errors,
+      })
+    }
 
     return NextResponse.json({
       success: true,
-      message: `${campaignIds.length} campanha(s) ${status === 'ENABLE' ? 'ativada(s)' : 'pausada(s)'}`,
-      campaignIds,
-      status,
+      message: `${campaignIds.length} campanha(s) atualizada(s)`,
+      results,
     })
-
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao atualizar status:', error)
     return NextResponse.json(
-      { error: 'Erro interno', details: error instanceof Error ? error.message : String(error) },
+      { error: error instanceof Error ? error.message : 'Erro ao atualizar status' },
       { status: 500 }
     )
   }
 }
-
